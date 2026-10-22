@@ -164,7 +164,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             ))}
           </ul>
         )}
-        <p className={ui.hint}>Showing the 20 most recent changes. Full history comes with Movement history (Phase 6).</p>
+        <Link href={`/admin/inventory/movements?product=${p.id}`} className={styles.allHistory}>
+          Full history for this product →
+        </Link>
       </section>
     </>
   );

@@ -4,6 +4,7 @@ import { weightTests } from "./weights.test";
 import { importTests, productTests } from "./products.test";
 import { operationTests } from "./operations.test";
 import { alertTests } from "./alerts.test";
+import { countTests } from "./counts.test";
 
 foundationTests()
   .then(() => weightTests())
@@ -11,5 +12,6 @@ foundationTests()
   .then(() => importTests())
   .then(() => operationTests())
   .then(() => alertTests())
+  .then(() => countTests())
   .then(() => pool.end())
   .catch(async (e) => { console.error(e); await pool.end(); process.exit(1); });

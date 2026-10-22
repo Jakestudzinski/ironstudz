@@ -11,6 +11,7 @@
 .statLabel { font-size: 14px; font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
 .muted { color: var(--inv-muted); font-size: 13px; }
+.allHistory { color: var(--inv-accent); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; min-height: 44px; align-self: flex-start; }
 .stockLine { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; }
 .qty { font-family: var(--inv-mono); font-size: 16px; }
 

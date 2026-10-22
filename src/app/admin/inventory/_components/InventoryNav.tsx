@@ -14,6 +14,8 @@ const LINKS = [
   { href: "/admin/inventory/break-down", label: "Break down", also: [] },
   { href: "/admin/inventory/transfer", label: "Move", also: [] },
   { href: "/admin/inventory/adjust", label: "Adjust", also: [] },
+  { href: "/admin/inventory/count", label: "Count", also: [] },
+  { href: "/admin/inventory/movements", label: "History", also: [] },
   { href: "/admin/inventory/vial-weights", label: "Vial weights", also: [] },
 ];
 

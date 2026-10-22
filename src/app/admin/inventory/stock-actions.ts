@@ -4,6 +4,7 @@ import { z } from "zod";
 import { runChange, type ActionResult } from "@/lib/inventory/run-change";
 import { recordDelivery } from "@/lib/inventory/receipts";
 import { markCancelledReviewed, resolveIssue } from "@/lib/inventory/alerts";
+import { addCountLine, cancelCount, finishCount, saveCountLine, startCount } from "@/lib/inventory/counts";
 import {
   adjust, adjustInput, breakDown, breakDownInput, lotStatusInput, setLotStatus, transfer, transferInput, writeOffLot,
 } from "@/lib/inventory/operations";
@@ -79,4 +80,39 @@ export async function resolveIssueAction(issueId: string, note: string) {
     .safeParse({ issueId, note });
   if (!parsed.success) return { ok: false as const, message: firstIssue(parsed.error) };
   return runChange((c, b, u) => resolveIssue(c, b, u, parsed.data.issueId, parsed.data.note));
+}
+
+// ---- Stock counts ----
+
+const uuid = z.string().uuid();
+
+export async function startCountAction(locationId: string) {
+  if (!uuid.safeParse(locationId).success) return { ok: false as const, message: "Choose a location" };
+  return runChange((c, b, u) => startCount(c, b, u, locationId));
+}
+
+export async function saveCountLineAction(countId: string, lineId: string, counted: number | null, weightG: number | null) {
+  const parsed = z.object({
+    countId: uuid, lineId: uuid,
+    counted: z.number().int("Counts must be whole numbers").min(0, "Counts can't be negative").max(1000000).nullable(),
+    weightG: z.number().positive("Weight must be more than 0").max(1000000).nullable(),
+  }).safeParse({ countId, lineId, counted, weightG });
+  if (!parsed.success) return { ok: false as const, message: firstIssue(parsed.error) };
+  const d = parsed.data;
+  return runChange((c, b) => saveCountLine(c, b, d.countId, d.lineId, { counted: d.counted, weightG: d.weightG }));
+}
+
+export async function addCountLineAction(countId: string, variantId: string, lotId: string) {
+  if (![countId, variantId, lotId].every((x) => uuid.safeParse(x).success)) return { ok: false as const, message: "Choose a form and lot" };
+  return runChange((c, b) => addCountLine(c, b, countId, variantId, lotId));
+}
+
+export async function finishCountAction(countId: string) {
+  if (!uuid.safeParse(countId).success) return { ok: false as const, message: "Unknown count" };
+  return runChange((c, b, u) => finishCount(c, b, u, countId));
+}
+
+export async function cancelCountAction(countId: string) {
+  if (!uuid.safeParse(countId).success) return { ok: false as const, message: "Unknown count" };
+  return runChange((c, b, u) => cancelCount(c, b, u, countId));
 }

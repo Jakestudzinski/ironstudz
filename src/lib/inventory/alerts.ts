@@ -113,7 +113,7 @@ export async function getAlerts(businessId: string): Promise<Alerts> {
 
   // Finished counts in the last 7 days where a line was off by more than the threshold.
   const countRows = await pool.query(
-    `SELECT cl.id, v.package_type, p.id AS product_id, p.name, p.strength_size, loc.name AS location, lot.lot_number,
+    `SELECT cl.id, sc.id AS count_id, v.package_type, p.id AS product_id, p.name, p.strength_size, loc.name AS location, lot.lot_number,
             cl.expected_qty, cl.counted_qty
        FROM stock_count_lines cl
        JOIN stock_counts sc ON sc.id = cl.stock_count_id
@@ -130,7 +130,7 @@ export async function getAlerts(businessId: string): Promise<Alerts> {
     id: r.id,
     name: productLabel({ name: r.name, strengthSize: r.strength_size }),
     info: `${r.location} · lot ${r.lot_number} · expected ${qty(r.expected_qty, r.package_type)}, counted ${r.counted_qty}`,
-    href: `/admin/inventory/products/${r.product_id}`,
+    href: `/admin/inventory/count/${r.count_id}`,
   }));
 
   return {
