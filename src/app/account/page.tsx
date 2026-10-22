@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 
 import { authOptions } from "@/lib/auth";
 
-export const metadata = { title: "Account · ironstudz" };
+export const metadata = { title: "Account · StudzStock" };
 
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);

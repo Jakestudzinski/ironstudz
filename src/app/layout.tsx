@@ -13,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ironstudz",
-  description: "Next.js 16 + Prisma + NextAuth starter",
+  title: "StudzStock",
+  description: "Inventory for the Studz businesses",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

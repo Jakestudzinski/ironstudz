@@ -1,18 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogIn, LogOut, UserPlus, User as UserIcon } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 
 export function Navbar() {
   const { user, status, signOut } = useAuth();
+  const pathname = usePathname();
+
+  // The inventory section has its own header (with Sign out).
+  if (pathname.startsWith("/admin/inventory")) return null;
 
   return (
     <header className="border-b border-black/10 dark:border-white/10">
       <nav className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
         <Link href="/" className="text-base font-semibold tracking-tight">
-          ironstudz
+          StudzStock
         </Link>
 
         <div className="flex items-center gap-3 text-sm">

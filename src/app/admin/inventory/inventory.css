@@ -1,0 +1,61 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+
+/* Scoped to the inventory section so the rest of the site is unaffected */
+.inv-root {
+  --inv-ink: #17201b;
+  --inv-muted: #5b6660;
+  --inv-page: #f3f4f1;
+  --inv-card: #ffffff;
+  --inv-border: #dadfda;
+  --inv-accent: #1d4ed8;
+  --inv-accent-dark: #1e3a8a;
+  --inv-ok-bg: #e3f1e6;  --inv-ok-fg: #1e5b31;
+  --inv-warn-bg: #fbefd5; --inv-warn-fg: #6b4200;
+  --inv-bad-bg: #fbe3e0;  --inv-bad-fg: #9b2219;
+  --inv-info-bg: #e6ecfb; --inv-info-fg: #1e3a8a;
+  --inv-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --inv-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Page side padding that also clears the iPhone notch / rounded corners */
+  --inv-gutter: 24px;
+  --inv-pad-left: max(var(--inv-gutter), env(safe-area-inset-left));
+  --inv-pad-right: max(var(--inv-gutter), env(safe-area-inset-right));
+
+  min-height: 100vh;
+  background: var(--inv-page);
+  color: var(--inv-ink);
+  font-family: var(--inv-sans);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+@media (max-width: 560px) {
+  .inv-root { --inv-gutter: 16px; }
+}
+
+.inv-root *,
+.inv-root *::before,
+.inv-root *::after { box-sizing: border-box; }
+.inv-root :focus-visible { outline: 3px solid var(--inv-accent); outline-offset: 2px; }
+
+/* iOS Safari zooms into any form field under 16px. Keep every field at 16px. */
+.inv-root input,
+.inv-root select,
+.inv-root textarea { font-size: 16px; }
+
+/* ---- Responsive helpers for every inventory screen ----
+   Phones (<= 720px): wide tables are replaced by cards. Render both and toggle with these classes:
+     <div className="inv-hide-phone"> table </div>  <div className="inv-show-phone"> cards </div>
+   Tablets and phones (<= 900px): use the -tablet pair for tables too wide for a portrait iPad. */
+.inv-root .inv-show-phone,
+.inv-root .inv-show-tablet { display: none; }
+@media (max-width: 900px) {
+  .inv-root .inv-hide-tablet { display: none; }
+  .inv-root .inv-show-tablet { display: block; }
+}
+@media (max-width: 720px) {
+  .inv-root .inv-hide-phone { display: none; }
+  .inv-root .inv-show-phone { display: block; }
+}
+/* Wide content scrolls inside its own box, never the page */
+.inv-root .inv-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }

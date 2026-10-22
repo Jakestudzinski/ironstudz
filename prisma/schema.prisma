@@ -1,4 +1,4 @@
-// Prisma schema for ironstudz starter.
+// Prisma schema for StudzStock.
 // NextAuth models follow https://authjs.dev/reference/adapter/prisma
 
 generator client {
@@ -67,4 +67,289 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ─── Inventory system models ───────────────────────────────────────────────
+// Paste these into the site's schema.prisma. They map 1:1 onto the tables in
+// prisma/migrations/20261022000000_inventory/migration.sql (which also holds
+// CHECK constraints and partial indexes that Prisma can't express).
+// user ids are plain strings that hold the site's User.id.
+
+model InvBusiness {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  users         InvBusinessUser[]
+  apiKeys       InvApiKey[]
+  products      InvProduct[]
+  variants      InvVariant[]
+  receipts      InvReceipt[]
+  movements     InvMovement[]
+  inboundOrders InvInboundOrder[]
+  requests      InvInboundRequest[]
+  alertSettings InvAlertSettings?
+  stockCounts   InvStockCount[]
+  preferences   InvUserPreference[]
+
+  @@map("businesses")
+}
+
+model InvBusinessUser {
+  businessId String      @map("business_id") @db.Uuid
+  userId     String      @map("user_id")
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  business   InvBusiness @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([businessId, userId])
+  @@map("business_users")
+}
+
+model InvApiKey {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId String      @map("business_id") @db.Uuid
+  keyHash    String      @unique @map("key_hash")
+  label      String
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  revokedAt  DateTime?   @map("revoked_at") @db.Timestamptz(6)
+  business   InvBusiness @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("api_keys")
+}
+
+model InvLocation {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String  @unique
+  area     String
+  isActive Boolean @default(true) @map("is_active")
+
+  homeOf        InvVariant[]
+  stock         InvStock[]
+  movementsFrom InvMovement[]   @relation("MovementFrom")
+  movementsTo   InvMovement[]   @relation("MovementTo")
+  stockCounts   InvStockCount[]
+
+  @@map("locations")
+}
+
+model InvProduct {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId          String       @map("business_id") @db.Uuid
+  name                String
+  category            String
+  strengthSize        String?      @map("strength_size")
+  isPriority          Boolean      @default(false) @map("is_priority")
+  vialWeightG         Decimal?     @map("vial_weight_g") @db.Decimal(8, 3)
+  vialWeightUpdatedAt DateTime?    @map("vial_weight_updated_at") @db.Timestamptz(6)
+  vialWeightUpdatedBy String?      @map("vial_weight_updated_by")
+  isActive            Boolean      @default(true) @map("is_active")
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+  business            InvBusiness  @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variants            InvVariant[]
+  lots                InvLot[]
+
+  @@index([businessId], map: "products_business_idx")
+  @@map("products")
+}
+
+model InvVariant {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId      String              @map("business_id") @db.Uuid
+  productId       String              @map("product_id") @db.Uuid
+  packageType     String              @map("package_type")
+  unitsPerPackage Int                 @map("units_per_package")
+  sku             String
+  homeLocationId  String?             @map("home_location_id") @db.Uuid
+  minLevel        Int                 @default(0) @map("min_level")
+  isActive        Boolean             @default(true) @map("is_active")
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @default(now()) @map("updated_at") @db.Timestamptz(6)
+  business        InvBusiness         @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product         InvProduct          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  homeLocation    InvLocation?        @relation(fields: [homeLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stock           InvStock[]
+  movements       InvMovement[]
+  countLines      InvStockCountLine[]
+
+  @@unique([businessId, sku])
+  @@map("variants")
+}
+
+model InvLot {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String              @map("product_id") @db.Uuid
+  lotNumber       String              @map("lot_number")
+  receivedAt      DateTime            @default(now()) @map("received_at") @db.Timestamptz(6)
+  testingStatus   String              @default("in_testing") @map("testing_status")
+  statusChangedAt DateTime?           @map("status_changed_at") @db.Timestamptz(6)
+  statusChangedBy String?             @map("status_changed_by")
+  notes           String?
+  product         InvProduct          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stock           InvStock[]
+  movements       InvMovement[]
+  countLines      InvStockCountLine[]
+
+  @@unique([productId, lotNumber])
+  @@map("lots")
+}
+
+model InvStock {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  variantId  String      @map("variant_id") @db.Uuid
+  lotId      String      @map("lot_id") @db.Uuid
+  locationId String      @map("location_id") @db.Uuid
+  quantity   Int         @default(0)
+  updatedAt  DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  variant    InvVariant  @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lot        InvLot      @relation(fields: [lotId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  location   InvLocation @relation(fields: [locationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([variantId, lotId, locationId])
+  @@map("stock")
+}
+
+model InvReceipt {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId String        @map("business_id") @db.Uuid
+  reference  String
+  receivedAt DateTime      @default(now()) @map("received_at") @db.Timestamptz(6)
+  notes      String?
+  createdBy  String        @map("created_by")
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  business   InvBusiness   @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  movements  InvMovement[]
+
+  @@unique([businessId, reference])
+  @@map("receipts")
+}
+
+/// Permanent log. Never update or delete rows; correct with an adjustment.
+model InvMovement {
+  id             BigInt       @id @default(autoincrement())
+  businessId     String       @map("business_id") @db.Uuid
+  movementType   String       @map("movement_type")
+  variantId      String       @map("variant_id") @db.Uuid
+  lotId          String       @map("lot_id") @db.Uuid
+  fromLocationId String?      @map("from_location_id") @db.Uuid
+  toLocationId   String?      @map("to_location_id") @db.Uuid
+  quantity       Int
+  reason         String?
+  orderRef       String?      @map("order_ref")
+  receiptId      String?      @map("receipt_id") @db.Uuid
+  userId         String?      @map("user_id")
+  groupId        String?      @map("group_id") @db.Uuid
+  notes          String?
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  business       InvBusiness  @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variant        InvVariant   @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lot            InvLot       @relation(fields: [lotId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fromLocation   InvLocation? @relation("MovementFrom", fields: [fromLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  toLocation     InvLocation? @relation("MovementTo", fields: [toLocationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  receipt        InvReceipt?  @relation(fields: [receiptId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([businessId, createdAt(sort: Desc)], map: "movements_business_time_idx")
+  @@index([variantId, movementType, createdAt], map: "movements_variant_type_time_idx")
+  @@map("movements")
+}
+
+model InvInboundOrder {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId       String                 @map("business_id") @db.Uuid
+  orderRef         String                 @map("order_ref")
+  paidAt           DateTime               @map("paid_at") @db.Timestamptz(6)
+  status           String                 @default("processed")
+  cancelledAt      DateTime?              @map("cancelled_at") @db.Timestamptz(6)
+  cancelType       String?                @map("cancel_type")
+  cancelReviewedAt DateTime?              @map("cancel_reviewed_at") @db.Timestamptz(6)
+  cancelReviewedBy String?                @map("cancel_reviewed_by")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  business         InvBusiness            @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  issues           InvInboundOrderIssue[]
+
+  @@unique([businessId, orderRef])
+  @@map("inbound_orders")
+}
+
+model InvInboundOrderIssue {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inboundOrderId    String          @map("inbound_order_id") @db.Uuid
+  sku               String
+  quantityRequested Int             @map("quantity_requested")
+  quantityDeducted  Int             @default(0) @map("quantity_deducted")
+  issue             String
+  resolvedAt        DateTime?       @map("resolved_at") @db.Timestamptz(6)
+  resolvedBy        String?         @map("resolved_by")
+  order             InvInboundOrder @relation(fields: [inboundOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("inbound_order_issues")
+}
+
+model InvInboundRequest {
+  id         BigInt       @id @default(autoincrement())
+  businessId String?      @map("business_id") @db.Uuid
+  endpoint   String
+  reference  String?
+  statusCode Int          @map("status_code")
+  payload    Json?
+  error      String?
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  business   InvBusiness? @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("inbound_requests")
+}
+
+model InvAlertSettings {
+  businessId             String      @id @map("business_id") @db.Uuid
+  emailTime              DateTime    @default(dbgenerated("'07:00:00'::time without time zone")) @map("email_time") @db.Time(6)
+  emailRecipients        String[]    @default([]) @map("email_recipients")
+  coverDays              Int         @default(90) @map("cover_days")
+  salesWindowDays        Int         @default(60) @map("sales_window_days")
+  testingOverdueDays     Int         @default(40) @map("testing_overdue_days")
+  countMismatchThreshold Int         @default(2) @map("count_mismatch_threshold")
+  business               InvBusiness @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("alert_settings")
+}
+
+model InvStockCount {
+  id         String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  businessId String              @map("business_id") @db.Uuid
+  locationId String              @map("location_id") @db.Uuid
+  status     String              @default("open")
+  startedBy  String              @map("started_by")
+  startedAt  DateTime            @default(now()) @map("started_at") @db.Timestamptz(6)
+  finishedBy String?             @map("finished_by")
+  finishedAt DateTime?           @map("finished_at") @db.Timestamptz(6)
+  business   InvBusiness         @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  location   InvLocation         @relation(fields: [locationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lines      InvStockCountLine[]
+
+  @@map("stock_counts")
+}
+
+model InvStockCountLine {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stockCountId   String        @map("stock_count_id") @db.Uuid
+  variantId      String        @map("variant_id") @db.Uuid
+  lotId          String        @map("lot_id") @db.Uuid
+  expectedQty    Int           @map("expected_qty")
+  countedQty     Int?          @map("counted_qty")
+  countedWeightG Decimal?      @map("counted_weight_g") @db.Decimal(10, 3)
+  count          InvStockCount @relation(fields: [stockCountId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variant        InvVariant    @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lot            InvLot        @relation(fields: [lotId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([stockCountId, variantId, lotId])
+  @@map("stock_count_lines")
+}
+
+model InvUserPreference {
+  userId           String       @id @map("user_id")
+  activeBusinessId String?      @map("active_business_id") @db.Uuid
+  updatedAt        DateTime     @default(now()) @map("updated_at") @db.Timestamptz(6)
+  activeBusiness   InvBusiness? @relation(fields: [activeBusinessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("user_preferences")
 }

@@ -1,4 +1,4 @@
-export const metadata = { title: "Down for maintenance · ironstudz" };
+export const metadata = { title: "Down for maintenance · StudzStock" };
 
 export default function MaintenancePage() {
   return (
@@ -7,7 +7,7 @@ export default function MaintenancePage() {
         We&apos;ll be right back
       </h1>
       <p className="opacity-70">
-        ironstudz is currently down for scheduled maintenance. Please check back
+        StudzStock is currently down for scheduled maintenance. Please check back
         in a few minutes.
       </p>
     </section>

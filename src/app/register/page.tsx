@@ -1,6 +1,6 @@
 import { RegisterForm } from "./RegisterForm";
 
-export const metadata = { title: "Create account · ironstudz" };
+export const metadata = { title: "Create account · StudzStock" };
 
 export default function RegisterPage() {
   return (
