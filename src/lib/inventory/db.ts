@@ -26,3 +26,15 @@ export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>)
     client.release();
   }
 }
+
+/** Runs fn in a transaction that is always rolled back: a dry run (e.g. an import preview). */
+export async function withRollback<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    return await fn(client);
+  } finally {
+    await client.query("ROLLBACK");
+    client.release();
+  }
+}

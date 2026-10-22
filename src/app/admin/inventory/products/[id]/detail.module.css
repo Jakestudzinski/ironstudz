@@ -1,0 +1,44 @@
+.title { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.edit { align-self: flex-start; margin-top: 8px; }
+.switches { display: flex; flex-direction: column; align-items: flex-start; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.value { font-family: var(--inv-mono); font-size: 28px; font-weight: 500; }
+.blue { color: var(--inv-info-fg); }
+.ok { color: var(--inv-ok-fg); }
+.watch { color: var(--inv-warn-fg); }
+.reorder { color: var(--inv-bad-fg); }
+.statLabel { font-size: 14px; font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.muted { color: var(--inv-muted); font-size: 13px; }
+.stockLine { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; }
+.qty { font-family: var(--inv-mono); font-size: 16px; }
+
+/* Forms and SKUs: one row per form; wraps into a card on phones */
+.formRow {
+  display: grid; grid-template-columns: minmax(140px, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr) 100px 120px;
+  gap: 8px 16px; align-items: center;
+}
+.formName { display: flex; gap: 8px; align-items: center; }
+.formHeadings {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--inv-muted);
+}
+.formHeadings .onHand { color: var(--inv-muted); font-size: 12px; }
+.sku { overflow-wrap: anywhere; }
+.onHand { text-align: right; color: var(--inv-muted); font-size: 14px; }
+.inactive { opacity: 0.6; }
+.minLevel { display: grid; grid-template-columns: auto; gap: 2px; }
+.minLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.minLevel input { max-width: 120px; }
+
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .formRow { grid-template-columns: minmax(0, 1fr) 120px; }
+  .formName { grid-column: 1; }
+  .sku, .home, .onHand { grid-column: 1; text-align: left; font-size: 13px; color: var(--inv-muted); }
+  .minLevel { grid-column: 2; grid-row: 1 / span 4; }
+  .minLabel { position: static; width: auto; height: auto; clip: auto; font-size: 13px; font-weight: 600; }
+}
+@media (max-width: 560px) {
+  .value { font-size: 24px; }
+}

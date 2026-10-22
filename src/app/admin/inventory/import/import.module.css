@@ -1,0 +1,15 @@
+.text { margin: 0; font-size: 14px; max-width: 760px; }
+.columns { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; margin: 0; font-size: 14px; }
+.columns dt { font-family: var(--inv-mono); font-weight: 500; }
+.columns dd { margin: 0; color: var(--inv-muted); }
+.template { align-self: flex-start; }
+.file { padding: 9px 12px; }
+.summary { display: flex; gap: 8px; flex-wrap: wrap; }
+.rowCard { display: flex; flex-direction: column; gap: 4px; }
+.rowTop { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+
+@media (max-width: 720px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+  .columns dd { margin-bottom: 6px; }
+  .template { align-self: stretch; }
+}
