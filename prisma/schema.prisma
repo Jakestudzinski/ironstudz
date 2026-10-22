@@ -178,18 +178,19 @@ model InvVariant {
 }
 
 model InvLot {
-  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  productId       String              @map("product_id") @db.Uuid
-  lotNumber       String              @map("lot_number")
-  receivedAt      DateTime            @default(now()) @map("received_at") @db.Timestamptz(6)
-  testingStatus   String              @default("in_testing") @map("testing_status")
-  statusChangedAt DateTime?           @map("status_changed_at") @db.Timestamptz(6)
-  statusChangedBy String?             @map("status_changed_by")
+  id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId       String               @map("product_id") @db.Uuid
+  lotNumber       String               @map("lot_number")
+  receivedAt      DateTime             @default(now()) @map("received_at") @db.Timestamptz(6)
+  testingStatus   String               @default("in_testing") @map("testing_status")
+  statusChangedAt DateTime?            @map("status_changed_at") @db.Timestamptz(6)
+  statusChangedBy String?              @map("status_changed_by")
   notes           String?
-  product         InvProduct          @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product         InvProduct           @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   stock           InvStock[]
   movements       InvMovement[]
   countLines      InvStockCountLine[]
+  statusChanges   InvLotStatusChange[]
 
   @@unique([productId, lotNumber])
   @@map("lots")
@@ -352,4 +353,19 @@ model InvUserPreference {
   activeBusiness   InvBusiness? @relation(fields: [activeBusinessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("user_preferences")
+}
+
+/// Every change to a lot's testing status. Never updated or deleted.
+model InvLotStatusChange {
+  id         BigInt   @id @default(autoincrement())
+  lotId      String   @map("lot_id") @db.Uuid
+  fromStatus String   @map("from_status")
+  toStatus   String   @map("to_status")
+  note       String?
+  changedBy  String   @map("changed_by")
+  changedAt  DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  lot        InvLot   @relation(fields: [lotId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([lotId, changedAt(sort: Desc)], map: "lot_status_changes_lot_idx")
+  @@map("lot_status_changes")
 }

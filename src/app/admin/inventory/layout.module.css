@@ -38,6 +38,12 @@
   padding: 0 var(--inv-pad-right) 0 var(--inv-pad-left);
   display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
+/* When the tabs don't fit, fade the edge so it's clear there are more to scroll to */
+@media (max-width: 900px) {
+  .nav { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav::after { content: ""; flex: 0 0 32px; }
+}
 .navLink {
   display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; white-space: nowrap;
   color: #c9d0cb; text-decoration: none; font-weight: 600; font-size: 14px;

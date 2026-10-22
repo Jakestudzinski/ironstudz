@@ -258,11 +258,11 @@ export async function getProductDetail(businessId: string, productId: string) {
   };
 }
 
-export type LocationOption = { id: string; name: string };
+export type LocationOption = { id: string; name: string; area: "back_stock" | "packing_station" | "storage" };
 
 export async function listLocations(): Promise<LocationOption[]> {
   const { rows } = await pool.query(
-    `SELECT id, name FROM locations WHERE is_active
+    `SELECT id, name, area FROM locations WHERE is_active
       ORDER BY array_position(ARRAY['back_stock','packing_station','storage'], area), name`
   );
   return rows;

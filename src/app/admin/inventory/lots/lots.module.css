@@ -1,0 +1,38 @@
+.lot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: center; }
+.info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.title { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; }
+.product {
+  color: var(--inv-accent); font-weight: 700; display: inline-flex; align-items: center; min-height: 44px;
+  text-underline-offset: 2px; overflow-wrap: anywhere;
+}
+.meta { color: var(--inv-muted); font-size: 14px; }
+.note { font-size: 14px; font-style: italic; }
+
+.actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; max-width: 520px; }
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.pass, .fail, .failSolid {
+  min-height: 44px; padding: 0 18px; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.pass { border: 1px solid var(--inv-ok-fg); background: var(--inv-ok-fg); color: #fff; }
+.fail { border: 1px solid var(--inv-bad-fg); background: #fff; color: var(--inv-bad-fg); }
+.failSolid { border: 1px solid var(--inv-bad-fg); background: var(--inv-bad-fg); color: #fff; }
+.pass:disabled, .fail:disabled, .failSolid:disabled { opacity: 0.55; cursor: default; }
+
+.confirm, .change {
+  border: 1px solid var(--inv-border); border-radius: 8px; padding: 12px; background: var(--inv-page);
+  display: flex; flex-direction: column; gap: 10px; width: 100%;
+}
+.confirm p { margin: 0; font-size: 14px; }
+
+@media (max-width: 720px) {
+  .lot { grid-template-columns: minmax(0, 1fr); }
+  .actions { align-items: stretch; max-width: none; }
+  .buttons { justify-content: stretch; }
+  .buttons > * { flex: 1 1 0; }
+}
+
+/* Confirmation banner stays in view while lots move between lists */
+.flash { position: sticky; top: 8px; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.dismiss {
+  min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; font-size: 22px; cursor: pointer;
+}
