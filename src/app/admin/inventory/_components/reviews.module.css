@@ -1,0 +1,21 @@
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.text { display: flex; flex-direction: column; min-width: 0; }
+.muted { color: var(--inv-muted); font-size: 13px; }
+.allDone { margin: 0; color: var(--inv-ok-fg); font-size: 14px; font-weight: 600; }
+.adjustLink { color: var(--inv-accent); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; min-height: 44px; align-self: flex-start; }
+.outline {
+  min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--inv-ink); background: #fff;
+  color: var(--inv-ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.outline:disabled { opacity: 0.55; cursor: default; }
+.issue { display: flex; flex-direction: column; gap: 10px; }
+.resolve {
+  border: 1px solid var(--inv-border); border-radius: 8px; padding: 12px; background: var(--inv-page);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@media (max-width: 720px) {
+  .row { align-items: stretch; flex-direction: column; }
+  .outline { width: 100%; }
+}

@@ -6,8 +6,9 @@ import { BreakDownForm } from "./BreakDownForm";
 
 export const metadata = { title: "Break down kit · Inventory" };
 
-export default async function BreakDownPage() {
+export default async function BreakDownPage({ searchParams }: { searchParams: Promise<{ product?: string | string[] }> }) {
   const { business } = await requireManager();
+  const { product } = await searchParams;
   const [stock, locations] = await Promise.all([listStock(business.id, ["kit", "half_kit"]), listLocations()]);
   const openable = stock.filter((s) => s.testingStatus !== "failed");
   return (
@@ -19,7 +20,11 @@ export default async function BreakDownPage() {
       {openable.length === 0 ? (
         <section className={ui.panel}><p className={ui.empty}>There are no sealed kits or half kits to break down.</p></section>
       ) : (
-        <BreakDownForm stock={openable} racks={locations.filter((l) => l.area === "packing_station")} />
+        <BreakDownForm
+          stock={openable}
+          racks={locations.filter((l) => l.area === "packing_station")}
+          initialProductId={typeof product === "string" ? product : undefined}
+        />
       )}
     </>
   );

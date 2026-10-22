@@ -282,6 +282,7 @@ model InvInboundOrderIssue {
   issue             String
   resolvedAt        DateTime?       @map("resolved_at") @db.Timestamptz(6)
   resolvedBy        String?         @map("resolved_by")
+  resolutionNote    String?         @map("resolution_note")
   order             InvInboundOrder @relation(fields: [inboundOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("inbound_order_issues")

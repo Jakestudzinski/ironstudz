@@ -6,8 +6,9 @@ import { ReceiveForm } from "./ReceiveForm";
 
 export const metadata = { title: "Receive stock · Inventory" };
 
-export default async function ReceivePage() {
+export default async function ReceivePage({ searchParams }: { searchParams: Promise<{ variant?: string | string[] }> }) {
   const { business } = await requireManager();
+  const { variant } = await searchParams;
   const [variants, locations] = await Promise.all([listVariantOptions(business.id), listLocations()]);
   return (
     <>
@@ -18,7 +19,7 @@ export default async function ReceivePage() {
       {variants.length === 0 ? (
         <section className={ui.panel}><p className={ui.empty}>Add products to {business.name} first.</p></section>
       ) : (
-        <ReceiveForm variants={variants} locations={locations} />
+        <ReceiveForm variants={variants} locations={locations} initialVariantId={typeof variant === "string" ? variant : undefined} />
       )}
     </>
   );

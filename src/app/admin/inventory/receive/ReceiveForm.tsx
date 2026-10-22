@@ -12,10 +12,15 @@ const UNIT_WORD = { kit: "kits", half_kit: "half kits", vial: "vials", unit: "un
 const ONE = { kit: "kit", half_kit: "half kit", vial: "vial", unit: "unit" } as const;
 const units = (t: keyof typeof ONE, n: number) => (n === 1 ? ONE[t] : UNIT_WORD[t]);
 
-export function ReceiveForm({ variants, locations }: { variants: VariantOption[]; locations: { id: string; name: string }[] }) {
+export function ReceiveForm({
+  variants, locations, initialVariantId,
+}: { variants: VariantOption[]; locations: { id: string; name: string }[]; initialVariantId?: string }) {
   const blank = (key: number): Line => ({ key, variantId: "", lot: "", quantity: "", location: "" });
   const [reference, setReference] = useState("");
-  const [lines, setLines] = useState<Line[]>([blank(1)]);
+  // A low-stock alert links here with ?variant= so the first line is already filled in.
+  const [lines, setLines] = useState<Line[]>([
+    { ...blank(1), variantId: variants.some((v) => v.id === initialVariantId) ? initialVariantId! : "" },
+  ]);
   const [nextKey, setNextKey] = useState(2);
   const [message, setMessage] = useState<{ ok: boolean; text: string; details?: string[] } | null>(null);
   const [pending, startTransition] = useTransition();

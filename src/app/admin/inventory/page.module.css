@@ -1,19 +1,36 @@
-.heading { margin: 0; font-size: 22px; font-weight: 700; }
-.sub { margin: 4px 0 0; color: var(--inv-muted); font-size: 14px; }
-.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 900px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.card {
-  background: var(--inv-card); border: 1px solid var(--inv-border); border-radius: 10px;
-  padding: 16px; display: flex; flex-direction: column; gap: 6px; min-height: 104px; justify-content: space-between;
+.sectionTitle { margin: 0; font-size: 17px; font-weight: 700; }
+.muted { color: var(--inv-muted); font-size: 13px; }
+
+/* Quick actions */
+.actionsSection { display: flex; flex-direction: column; gap: 12px; }
+.quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.quickLink {
+  display: flex; align-items: center; justify-content: center; min-height: 64px; padding: 0 16px;
+  border: 2px solid var(--inv-accent); border-radius: 10px; background: #fff; color: var(--inv-accent);
+  font-size: 16px; font-weight: 600; text-decoration: none; text-align: center;
 }
-.value { font-family: var(--inv-mono); font-size: 30px; font-weight: 500; }
-.label { font-size: 14px; font-weight: 600; }
-.note {
-  background: var(--inv-card); border: 1px dashed #b9c1bb; border-radius: 10px;
-  padding: 16px 20px; color: var(--inv-muted); font-size: 14px; margin: 0;
+.quickLink:hover { background: var(--inv-accent); color: #fff; }
+
+/* Priority table + side column */
+.columns { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.productLink {
+  color: var(--inv-accent); font-weight: 600; text-underline-offset: 2px;
+  display: inline-flex; align-items: center; min-height: 44px;
 }
-@media (max-width: 560px) {
-  .cards { gap: 10px; }
-  .card { min-height: 84px; padding: 12px; }
-  .value { font-size: 26px; }
+.priorityCards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.priorityCard {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; background: var(--inv-page);
+  color: var(--inv-ink); text-decoration: none; font-size: 14px;
+}
+.priorityTop { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.lotRow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.lotRow > span:first-child { display: flex; flex-direction: column; min-width: 0; }
+.more { color: var(--inv-accent); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; min-height: 44px; }
+
+@media (max-width: 900px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .quick { grid-template-columns: minmax(0, 1fr); }
 }

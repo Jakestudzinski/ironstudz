@@ -15,7 +15,9 @@ function defaultLine(lines: StockOption[]) {
   return lines.find((l) => l.testingStatus === "passed") ?? lines[0];
 }
 
-export function BreakDownForm({ stock, racks }: { stock: StockOption[]; racks: { id: string; name: string }[] }) {
+export function BreakDownForm({
+  stock, racks, initialProductId,
+}: { stock: StockOption[]; racks: { id: string; name: string }[]; initialProductId?: string }) {
   const products = useMemo(() => {
     const m = new Map<string, string>();
     for (const s of stock) m.set(s.productId, s.product);
@@ -23,8 +25,10 @@ export function BreakDownForm({ stock, racks }: { stock: StockOption[]; racks: {
   }, [stock]);
 
   const formsFor = (pid: string) => (["kit", "half_kit"] as const).filter((t) => stock.some((s) => s.productId === pid && s.packageType === t));
-  const [chosenProduct, setProductId] = useState(products[0][0]);
-  const [chosenForm, setForm] = useState<"kit" | "half_kit">(formsFor(products[0][0])[0]);
+  // A refill alert links here with ?product= so the right product is already chosen.
+  const start = products.some(([id]) => id === initialProductId) ? initialProductId! : products[0][0];
+  const [chosenProduct, setProductId] = useState(start);
+  const [chosenForm, setForm] = useState<"kit" | "half_kit">(formsFor(start)[0]);
   // After a break down the page refreshes; if the chosen kits ran out, fall back to what is left.
   const productId = products.some(([id]) => id === chosenProduct) ? chosenProduct : products[0][0];
   const form = formsFor(productId).includes(chosenForm) ? chosenForm : formsFor(productId)[0];
