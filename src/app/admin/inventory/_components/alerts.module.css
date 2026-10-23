@@ -8,7 +8,7 @@
   display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
 }
 .hasItems { border-color: #e7b4ad; }
-.card[aria-pressed="true"] { border-color: var(--inv-accent); background: #eef2fd; }
+.card[aria-expanded="true"] { border-color: var(--inv-accent); background: #eef2fd; }
 .count { font-family: var(--inv-mono); font-size: 30px; font-weight: 500; line-height: 1; }
 .bad { color: var(--inv-bad-fg); }
 .good { color: var(--inv-ok-fg); }

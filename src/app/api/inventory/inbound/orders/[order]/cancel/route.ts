@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticateBusiness } from "@/lib/inventory/auth";
+import { authorizeInbound } from "@/lib/inventory/inbound-guard";
 import { withTransaction } from "@/lib/inventory/db";
 import { InboundError, errorResponse } from "@/lib/inventory/errors";
 import { logInbound } from "@/lib/inventory/log";
@@ -19,11 +19,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ order: string 
   const { order } = await ctx.params;
   const orderRef = decodeURIComponent(order);
 
-  const auth = await authenticateBusiness(req);
-  if (!auth) {
-    await logInbound({ endpoint, statusCode: 401, reference: orderRef, error: "invalid or missing API key" });
-    return errorResponse(401, "Invalid or missing API key");
-  }
+  const auth = await authorizeInbound(req, endpoint, orderRef);
+  if (auth instanceof Response) return auth;
 
   let body: unknown = {};
   const text = await req.text();

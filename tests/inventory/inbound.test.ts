@@ -6,8 +6,12 @@ import { POST as postOrder } from "@/app/api/inventory/inbound/orders/route";
 import { POST as postCancel } from "@/app/api/inventory/inbound/orders/[order]/cancel/route";
 
 const q = (s: string, p: unknown[] = []) => pool.query(s, p);
-const call = (fn: any, key: string | null, body: unknown, params?: any) =>
-  fn(new Request("http://x/api", { method: "POST", headers: { "content-type": "application/json", ...(key ? { authorization: "Bearer " + key } : {}) }, body: JSON.stringify(body) }), params);
+type Deducted = { location_id: string; quantity: number };
+type Issue = { issue: string; deducted: number };
+// The route handlers under test: (request) or (request, { params })
+type Handler = (req: Request, ctx: { params: Promise<{ order: string }> }) => Promise<Response>;
+const call = (fn: Handler, key: string | null, body: unknown, params?: { params: Promise<{ order: string }> }) =>
+  fn(new Request("http://x/api", { method: "POST", headers: { "content-type": "application/json", ...(key ? { authorization: "Bearer " + key } : {}) }, body: JSON.stringify(body) }), params as { params: Promise<{ order: string }> });
 
 async function main() {
   const b1 = (await q(`insert into businesses(name) values('Biz One') returning id`)).rows[0].id;
@@ -38,14 +42,14 @@ async function main() {
   // FIFO: 7 vials -> L1 Rack A (home) 5, then L1 Rack C 2
   r = await (await call(postOrder, key1, { order_ref: "O-2", lines: [{ sku: "BPC10-V", quantity: 4 }, { sku: "BPC10-V", quantity: 3 }] })).json();
   assert.equal(r.status, "processed");
-  assert.deepEqual(r.deducted.map((d: any) => [d.location_id === loc["Rack A"] ? "A" : "C", d.quantity]), [["A", 5], ["C", 2]]);
+  assert.deepEqual(r.deducted.map((d: Deducted) => [d.location_id === loc["Rack A"] ? "A" : "C", d.quantity]), [["A", 5], ["C", 2]]);
   // Duplicate order: no second deduction
   r = await (await call(postOrder, key1, { order_ref: "O-2", lines: [{ sku: "BPC10-V", quantity: 7 }] })).json();
   assert.equal(r.duplicate, true);
   // 12 requested, 11 left (1 in L1, 10 in L2) + unknown sku
   r = await (await call(postOrder, key1, { order_ref: "O-3", lines: [{ sku: "BPC10-V", quantity: 12 }, { sku: "GHOST", quantity: 1 }] })).json();
   assert.equal(r.status, "needs_review");
-  assert.deepEqual(r.issues.map((i: any) => [i.issue, i.deducted]).sort(), [["insufficient_stock", 11], ["unknown_sku", 0]]);
+  assert.deepEqual(r.issues.map((i: Issue) => [i.issue, i.deducted]).sort(), [["insufficient_stock", 11], ["unknown_sku", 0]]);
   assert.equal((await q(`select coalesce(sum(quantity),0)::int n from stock where variant_id=$1`, [vial])).rows[0].n, 0);
   assert.equal((await q(`select min(quantity)::int n from stock`)).rows[0].n, 0, "never negative");
 
@@ -60,7 +64,7 @@ async function main() {
 
   // Cancellation
   const params = (o: string) => ({ params: Promise.resolve({ order: o }) });
-  let res = await call(postCancel, key1, { type: "refunded" }, params("O-2"));
+  const res = await call(postCancel, key1, { type: "refunded" }, params("O-2"));
   r = await res.json(); assert.equal(res.status, 200); assert.equal(r.duplicate, false);
   r = await (await call(postCancel, key1, {}, params("O-2"))).json(); assert.equal(r.duplicate, true);
   assert.equal((await call(postCancel, key1, {}, params("NOPE"))).status, 404);
@@ -73,7 +77,7 @@ async function main() {
     call(postOrder, key1, { order_ref: "R-1", lines: [{ sku: "BPC10-V", quantity: 4 }] }).then((x: Response) => x.json()),
     call(postOrder, key1, { order_ref: "R-2", lines: [{ sku: "BPC10-V", quantity: 4 }] }).then((x: Response) => x.json()),
   ]);
-  const total = [a, b].flatMap((x) => x.deducted).reduce((s: number, d: any) => s + d.quantity, 0);
+  const total = [a, b].flatMap((x) => x.deducted).reduce((s: number, d: Deducted) => s + d.quantity, 0);
   assert.equal(total, 5, "race must never oversell");
 
   const logs = (await q(`select count(*)::int n from inbound_requests`)).rows[0].n;

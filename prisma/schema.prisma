@@ -389,3 +389,13 @@ model InvDailyEmailSend {
   @@unique([businessId, sendDate])
   @@map("daily_email_sends")
 }
+
+/// Request counters for rate limiting the inbound API.
+model InvRateLimit {
+  bucket      String
+  windowStart DateTime @map("window_start") @db.Timestamptz(6)
+  count       Int      @default(0)
+
+  @@id([bucket, windowStart])
+  @@map("rate_limits")
+}

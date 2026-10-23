@@ -6,6 +6,7 @@ import { logInbound } from "@/lib/inventory/log";
 import { recordDelivery } from "@/lib/inventory/receipts";
 import { userCanManage } from "@/lib/inventory/businesses";
 import { getSessionUser } from "@/lib/inventory/session";
+import { LIMITS, hit } from "@/lib/inventory/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,12 @@ export async function POST(req: Request) {
   const endpoint = "receipts";
   const user = await getSessionUser();
   if (!user) return errorResponse(401, "Please sign in");
+  const limited = await hit(`user:${user.id}`, LIMITS.perUser);
+  if (!limited.allowed) {
+    const res = errorResponse(429, "Too many deliveries at once. Wait a moment and try again.");
+    res.headers.set("Retry-After", String(limited.retryAfter));
+    return res;
+  }
 
   let body: unknown;
   try {

@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inventory</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F3F4F1}
+button,select,input{font-family:inherit}
+.inv-link{background:none;border:none;padding:0;margin:0;font:inherit;font-weight:600;color:#1D4ED8;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px;min-height:32px}
+.inv-link:hover{color:#1E3A8A}
+/* iOS Safari zooms into any field under 16px: keep every field at 16px */
+input,select,textarea{font-size:16px !important}
+/* page side padding that also clears the iPhone notch and rounded corners */
+.inv-pad{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
+/* phone: cards instead of tables */
+.inv-show-phone{display:none}
+/* tablet and phone: product cards instead of the wide table */
+.inv-cards{display:none}
+@media (max-width: 900px){
+  .inv-table-wrap{display:none !important}
+  .inv-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+}
+@media (max-width: 720px){
+  .inv-hide-phone{display:none !important}
+  .inv-show-phone{display:flex !important}
+}
+@media (max-width: 560px){
+  .inv-pad{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+  .inv-main{padding-top:20px !important;gap:20px !important}
+  .inv-alerts{grid-template-columns:1fr 1fr !important;gap:10px !important}
+  .inv-alert{min-height:84px !important;padding:12px !important}
+  .inv-alert-num{font-size:26px !important}
+  .inv-stats{grid-template-columns:1fr 1fr !important;gap:10px !important}
+  .inv-card-pad{padding:16px !important}
+  .inv-cards{grid-template-columns:1fr}
+  .inv-userline{display:none !important}
+}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F3F4F1; color: #17201B; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.45">
+
+<header style="background: #17201B; color: #F3F4F1; padding-top: env(safe-area-inset-top)">
+<div class="inv-pad" style="max-width: 1200px; margin: 0 auto; padding-top: 12px; padding-bottom: 12px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<div style="font-weight: 700; font-size: 18px">Inventory</div>
+<label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #C9D0CB">Business
+<select value="{{biz}}" onChange="{{onBiz}}" style="min-height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid #4A544E; background: #232B26; color: #F3F4F1; font-size: 14px; font-weight: 600">
+<sc-for list="{{bizOptions}}" as="b" hint-placeholder-count="2">
+<option value="{{b.id}}">{{b.name}}</option>
+</sc-for>
+</select>
+</label>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<span style="font-size: 12px; font-weight: 600; background: #FBEFD5; color: #6B4200; padding: 4px 10px; border-radius: 999px">Preview · sample data</span>
+<span class="inv-userline" style="font-size: 14px; color: #C9D0CB">Wed 21 Oct · Manager</span>
+</div>
+</div>
+<nav aria-label="Inventory" class="inv-pad" style="max-width: 1200px; margin: 0 auto; display: flex; gap: 4px; overflow-x: auto">
+<sc-for list="{{navItems}}" as="n" hint-placeholder-count="2">
+<button onClick="{{n.go}}" aria-current="{{n.current}}" style="min-height: 44px; padding: 0 14px; white-space: nowrap; background: none; border: none; border-bottom: 3px solid {{n.line}}; color: {{n.color}}; font-size: 14px; font-weight: 600; cursor: pointer">{{n.label}}</button>
+</sc-for>
+</nav>
+</header>
+
+<main class="inv-pad inv-main" style="max-width: 1200px; margin: 0 auto; padding-top: 28px; padding-bottom: calc(64px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 24px">
+
+<sc-if value="{{showToast}}" hint-placeholder-val="{{false}}">
+<div role="status" style="background: {{toastBg}}; color: {{toastFg}}; border-radius: 10px; padding: 14px 18px; font-weight: 600; font-size: 15px">{{toast}}</div>
+</sc-if>
+
+<!-- ============ DASHBOARD ============ -->
+<sc-if value="{{showDash}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 28px">
+
+<section aria-labelledby="h-alerts" style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<h2 id="h-alerts" style="margin: 0; font-size: 20px; font-weight: 700">Needs attention today</h2>
+<div style="font-size: 13px; color: #5B6660">Tap a card to see what’s behind it</div>
+</div>
+<div class="inv-alerts" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+<sc-for list="{{alerts}}" as="a" hint-placeholder-count="5">
+<button class="inv-alert" onClick="{{a.pick}}" aria-pressed="{{a.pressed}}" style="text-align: left; min-height: 104px; padding: 16px; border-radius: 10px; border: 2px solid {{a.border}}; background: {{a.bg}}; color: #17201B; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; gap: 8px">
+<span class="inv-alert-num" style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 30px; font-weight: 500; color: {{a.numColor}}">{{a.count}}</span>
+<span style="font-size: 14px; font-weight: 600">{{a.label}}</span>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{showDetail}}" hint-placeholder-val="{{false}}">
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+<h3 style="margin: 0; font-size: 16px; font-weight: 700">{{detailTitle}}</h3>
+<button onClick="{{closeDetail}}" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #DADFDA; background: #FFFFFF; color: #17201B; cursor: pointer; font-size: 14px">Close</button>
+</div>
+<sc-if value="{{detailEmpty}}" hint-placeholder-val="{{false}}">
+<div style="color: #5B6660; font-size: 14px">Nothing here right now.</div>
+</sc-if>
+<sc-for list="{{detailItems}}" as="d" hint-placeholder-count="3">
+<div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid #ECEFEC">
+<span style="font-weight: 600">{{d.name}}</span>
+<span style="color: #3F4943">{{d.info}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</section>
+
+<section aria-labelledby="h-cancel" style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<h2 id="h-cancel" style="margin: 0; font-size: 17px; font-weight: 700">Cancelled orders to review</h2>
+<div style="font-size: 13px; color: #5B6660">Check the shelf, add stock back if needed, then mark reviewed</div>
+</div>
+<sc-if value="{{noCancelled}}" hint-placeholder-val="{{false}}">
+<div style="color: #1E5B31; font-size: 14px; font-weight: 600">All cancelled orders reviewed.</div>
+</sc-if>
+<sc-for list="{{cancelled}}" as="c" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid #ECEFEC">
+<div style="display: flex; flex-direction: column">
+<span style="font-weight: 600">Order {{c.order}} · {{c.item}}</span>
+<span style="font-size: 13px; color: #5B6660">{{c.when}}</span>
+</div>
+<button onClick="{{c.review}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #17201B; background: #FFFFFF; color: #17201B; cursor: pointer; font-size: 14px; font-weight: 600">Mark reviewed</button>
+</div>
+</sc-for>
+</section>
+
+<section aria-labelledby="h-actions" style="display: flex; flex-direction: column; gap: 12px">
+<h2 id="h-actions" style="margin: 0; font-size: 17px; font-weight: 700">Quick actions</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px">
+<button onClick="{{openBreak}}" aria-pressed="{{breakPressed}}" style="min-height: 64px; border-radius: 10px; border: 2px solid #1D4ED8; background: {{breakBg}}; color: {{breakFg}}; font-size: 16px; font-weight: 600; cursor: pointer">Break down kit</button>
+<button onClick="{{openReceive}}" aria-pressed="{{receivePressed}}" style="min-height: 64px; border-radius: 10px; border: 2px solid #1D4ED8; background: {{receiveBg}}; color: {{receiveFg}}; font-size: 16px; font-weight: 600; cursor: pointer">Receive stock</button>
+<button onClick="{{openTesting}}" aria-pressed="{{testingPressed}}" style="min-height: 64px; border-radius: 10px; border: 2px solid #1D4ED8; background: {{testingBg}}; color: {{testingFg}}; font-size: 16px; font-weight: 600; cursor: pointer">Update testing</button>
+</div>
+
+<sc-if value="{{showBreak}}" hint-placeholder-val="{{false}}">
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<h3 style="margin: 0; font-size: 16px; font-weight: 700">Break down a kit from Back 1</h3>
+<sc-if value="{{noBreak}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 14px; color: #3F4943">This business has no kits to break down.</div>
+</sc-if>
+<sc-if value="{{hasBreak}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Product
+<select value="{{breakId}}" onChange="{{onBreakProduct}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<sc-for list="{{breakOptions}}" as="o" hint-placeholder-count="6">
+<option value="{{o.id}}">{{o.label}}</option>
+</sc-for>
+</select>
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Open a
+<select value="{{breakPkg}}" onChange="{{onBreakPkg}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<option value="kit">Kit (10 vials)</option>
+<option value="half">Half kit (5 vials)</option>
+</select>
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Vials go to
+<select value="{{breakTo}}" onChange="{{onBreakTo}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<option value="Rack A">Rack A</option>
+<option value="Rack C">Rack C</option>
+</select>
+</label>
+</div>
+<div style="font-size: 14px; color: #3F4943">{{breakSummary}}</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<button onClick="{{confirmBreak}}" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: none; background: #1D4ED8; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer">Confirm break down</button>
+<button onClick="{{closePanel}}" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: 1px solid #DADFDA; background: #FFFFFF; color: #17201B; font-size: 15px; cursor: pointer">Cancel</button>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{showReceive}}" hint-placeholder-val="{{false}}">
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h3 style="margin: 0; font-size: 16px; font-weight: 700">Receive stock</h3>
+<span style="font-size: 13px; color: #5B6660">New lots start as In testing and can’t be sold until they pass.</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Delivery reference
+<input value="{{rcvRef}}" onChange="{{onRcvRef}}" placeholder="e.g. PO-118" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px; box-sizing: border-box">
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Product and form
+<select value="{{rcvVariant}}" onChange="{{onRcvVariant}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<sc-for list="{{rcvOptions}}" as="o" hint-placeholder-count="8">
+<option value="{{o.id}}">{{o.label}}</option>
+</sc-for>
+</select>
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Lot number
+<input value="{{rcvLot}}" onChange="{{onRcvLot}}" placeholder="e.g. 2410H" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px; box-sizing: border-box">
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Quantity
+<input type="number" min="1" value="{{rcvQty}}" onChange="{{onRcvQty}}" placeholder="0" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px; box-sizing: border-box">
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Location
+<select value="{{rcvLoc}}" onChange="{{onRcvLoc}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<option value="">Home location ({{rcvHome}})</option>
+<option value="Back 1">Back 1</option>
+<option value="Rack A">Rack A</option>
+<option value="Rack C">Rack C</option>
+<option value="D6">D6</option>
+<option value="D3">D3</option>
+<option value="D2">D2</option>
+</select>
+</label>
+</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<button onClick="{{confirmReceive}}" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: none; background: #1D4ED8; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer">Record delivery</button>
+<button onClick="{{closePanel}}" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: 1px solid #DADFDA; background: #FFFFFF; color: #17201B; font-size: 15px; cursor: pointer">Cancel</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showTesting}}" hint-placeholder-val="{{false}}">
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
+<h3 style="margin: 0; font-size: 16px; font-weight: 700">Update testing</h3>
+<button onClick="{{closePanel}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #DADFDA; background: #FFFFFF; color: #17201B; font-size: 14px; cursor: pointer">Done</button>
+</div>
+<sc-if value="{{noTestingLots}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 14px; color: #5B6660">No lots are waiting on test results.</div>
+</sc-if>
+<sc-for list="{{testLots}}" as="t" hint-placeholder-count="3">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid #ECEFEC">
+<div style="display: flex; flex-direction: column">
+<span style="font-weight: 600">{{t.product}} · Lot {{t.lot}}</span>
+<span style="font-size: 13px; color: #5B6660">{{t.qtyText}} · {{t.days}} days in testing</span>
+</div>
+<div style="display: flex; gap: 8px">
+<button onClick="{{t.pass}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: none; background: #1E5B31; color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer">Passed</button>
+<button onClick="{{t.fail}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #9B2219; background: #FFFFFF; color: #9B2219; font-size: 14px; font-weight: 600; cursor: pointer">Failed</button>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+<section aria-labelledby="h-top" style="flex: 999 1 600px; min-width: 0; background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<h2 id="h-top" style="margin: 0; font-size: 17px; font-weight: 700">Priority products at a glance</h2>
+<div style="font-size: 13px; color: #5B6660">Sellable stock · days of cover from the last 60 days of sales</div>
+</div>
+<div class="inv-hide-phone" style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; min-width: 620px; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #5B6660; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em">
+<th style="padding: 8px 8px 8px 0; font-weight: 600">Product</th>
+<th style="padding: 8px; font-weight: 600">On hand</th>
+<th style="padding: 8px; font-weight: 600; text-align: right">Total</th>
+<th style="padding: 8px; font-weight: 600; text-align: right">Per day</th>
+<th style="padding: 8px; font-weight: 600; text-align: right">Days</th>
+<th style="padding: 8px 0 8px 8px; font-weight: 600">Status</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{priorityRows}}" as="r" hint-placeholder-count="15">
+<tr style="border-top: 1px solid #ECEFEC">
+<td style="padding: 8px 8px 8px 0"><button class="inv-link" onClick="{{r.open}}">{{r.name}}</button></td>
+<td style="padding: 10px 8px; color: #3F4943">{{r.mix}}</td>
+<td style="padding: 10px 8px; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{r.total}}</td>
+<td style="padding: 10px 8px; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{r.avgText}}</td>
+<td style="padding: 10px 8px; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-weight: 500">{{r.coverText}}</td>
+<td style="padding: 10px 0 10px 8px"><span style="display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{r.pillBg}}; color: {{r.pillFg}}">{{r.status}}</span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div class="inv-show-phone" style="flex-direction: column; gap: 8px">
+<sc-for list="{{priorityRows}}" as="r" hint-placeholder-count="6">
+<button onClick="{{r.open}}" style="text-align: left; background: #F7F8F6; border: 1px solid #ECEFEC; border-radius: 8px; padding: 12px 14px; color: #17201B; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px">
+<span style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-weight: 700">{{r.name}}</span>
+<span style="font-size: 13px; color: #3F4943">{{r.mix}}</span>
+<span style="font-size: 13px; color: #5B6660">{{r.total}} total · {{r.avgText}}/day · {{r.coverText}} days</span>
+</span>
+<span style="flex-shrink: 0; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{r.pillBg}}; color: {{r.pillFg}}">{{r.status}}</span>
+</button>
+</sc-for>
+</div>
+</section>
+
+<div style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<section aria-labelledby="h-lots" style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<h2 id="h-lots" style="margin: 0; font-size: 17px; font-weight: 700">Lots in testing</h2>
+<div style="font-size: 13px; color: #5B6660">{{lotSummary}}</div>
+<sc-for list="{{testLots}}" as="l" hint-placeholder-count="3">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #ECEFEC">
+<div style="display: flex; flex-direction: column">
+<span style="font-weight: 600">{{l.product}}</span>
+<span style="font-size: 13px; color: #5B6660">Lot {{l.lot}} · {{l.days}} days</span>
+</div>
+<span style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{l.pillBg}}; color: {{l.pillFg}}">{{l.status}}</span>
+</div>
+</sc-for>
+</section>
+<section aria-labelledby="h-act" style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<h2 id="h-act" style="margin: 0; font-size: 17px; font-weight: 700">Recent activity</h2>
+<sc-for list="{{activity}}" as="e" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; padding: 10px 0; border-top: 1px solid #ECEFEC">
+<span style="font-size: 14px"><strong>{{e.who}}</strong> · {{e.text}}</span>
+<span style="font-size: 12px; color: #5B6660">{{e.time}}</span>
+</div>
+</sc-for>
+</section>
+</div>
+</div>
+
+</div>
+</sc-if>
+
+<!-- ============ PRODUCTS LIST ============ -->
+<sc-if value="{{showProducts}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div>
+<h1 style="margin: 0; font-size: 22px; font-weight: 700">Products</h1>
+<p style="margin: 4px 0 0; color: #5B6660; font-size: 14px">{{listSummary}}</p>
+</div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<button onClick="{{onImport}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #1D4ED8; background: #FFFFFF; color: #1D4ED8; font-size: 14px; font-weight: 600; cursor: pointer">Bulk import</button>
+<button onClick="{{onAddProduct}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: none; background: #1D4ED8; color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer">Add product</button>
+</div>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943; grid-column: 1 / -1">Search
+<input value="{{q}}" onChange="{{onQ}}" placeholder="Name, strength or SKU" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px; box-sizing: border-box">
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Category
+<select value="{{fCat}}" onChange="{{onCat}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<option value="all">All categories</option>
+<option value="peptide">Peptides</option>
+<option value="skin_care">Skin care</option>
+<option value="pre_workout">Pre-workouts</option>
+</select>
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Location
+<select value="{{fLoc}}" onChange="{{onLoc}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<option value="all">All locations</option>
+<option value="Back 1">Back 1</option>
+<option value="Rack A">Rack A</option>
+<option value="Rack C">Rack C</option>
+<option value="D6">D6</option>
+<option value="D3">D3</option>
+<option value="D2">D2</option>
+</select>
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Sort by
+<select value="{{sort}}" onChange="{{onSort}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<option value="name">Name</option>
+<option value="cover">Days of cover (lowest first)</option>
+<option value="total">Total stock (lowest first)</option>
+</select>
+</label>
+<div style="display: flex; flex-direction: column; gap: 4px; grid-column: 1 / -1">
+<label style="display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 14px; cursor: pointer"><input type="checkbox" checked="{{fPrio}}" onChange="{{onPrio}}" style="width: 20px; height: 20px">Priority products only</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 32px; font-size: 14px; cursor: pointer"><input type="checkbox" checked="{{fInactive}}" onChange="{{onInactive}}" style="width: 20px; height: 20px">Show inactive products</label>
+</div>
+</div>
+
+<sc-if value="{{noResults}}" hint-placeholder-val="{{false}}">
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 20px; color: #5B6660">No products match. Try clearing the search or a filter.</div>
+</sc-if>
+
+<div class="inv-table-wrap" style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 8px 20px; overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; min-width: 900px; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #5B6660; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em">
+<th style="padding: 10px 8px 10px 0; font-weight: 600">Product</th>
+<th style="padding: 10px 8px; font-weight: 600">Sellable on hand</th>
+<th style="padding: 10px 8px; font-weight: 600">In testing</th>
+<th style="padding: 10px 8px; font-weight: 600; text-align: right">Total</th>
+<th style="padding: 10px 8px; font-weight: 600; text-align: right">Days</th>
+<th style="padding: 10px 8px; font-weight: 600">Status</th>
+<th style="padding: 10px 0 10px 8px; font-weight: 600">Website count</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{listRows}}" as="r" hint-placeholder-count="10">
+<tr style="border-top: 1px solid #ECEFEC; opacity: {{r.opacity}}">
+<td style="padding: 8px 8px 8px 0">
+<div style="display: flex; align-items: center; gap: 6px"><span aria-label="{{r.starLabel}}" style="color: #B7791F; width: 14px">{{r.star}}</span><button class="inv-link" onClick="{{r.open}}">{{r.name}}</button></div>
+<div style="font-size: 12px; color: #5B6660; padding-left: 20px">{{r.catLabel}}{{r.inactiveText}}</div>
+</td>
+<td style="padding: 10px 8px; color: #3F4943">{{r.mix}}</td>
+<td style="padding: 10px 8px; color: #1E3A8A">{{r.testingText}}</td>
+<td style="padding: 10px 8px; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{r.total}}</td>
+<td style="padding: 10px 8px; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{r.coverText}}</td>
+<td style="padding: 10px 8px"><span style="display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{r.pillBg}}; color: {{r.pillFg}}">{{r.status}}</span></td>
+<td style="padding: 10px 0 10px 8px"><span style="display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{r.matchBg}}; color: {{r.matchFg}}">{{r.matchText}}</span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+
+<div class="inv-cards">
+<sc-for list="{{listRows}}" as="r" hint-placeholder-count="6">
+<button onClick="{{r.open}}" style="text-align: left; background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 14px 16px; color: #17201B; cursor: pointer; display: flex; flex-direction: column; gap: 8px; opacity: {{r.opacity}}">
+<span style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; width: 100%">
+<span style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-weight: 700; font-size: 16px"><span aria-label="{{r.starLabel}}" style="color: #B7791F">{{r.star}}</span> {{r.name}}</span>
+<span style="font-size: 12px; color: #5B6660">{{r.catLabel}}{{r.inactiveText}}</span>
+</span>
+<span style="flex-shrink: 0; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{r.pillBg}}; color: {{r.pillFg}}">{{r.status}}</span>
+</span>
+<span style="font-size: 14px; color: #3F4943">{{r.mix}}</span>
+<span style="display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: #5B6660">
+<span><strong style="color: #17201B; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{r.total}}</strong> {{r.unitWord}}</span>
+<span><strong style="color: #17201B; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{r.coverText}}</strong> days</span>
+<sc-if value="{{r.hasTesting}}" hint-placeholder-val="{{false}}"><span style="color: #1E3A8A">In testing {{r.testingText}}</span></sc-if>
+</span>
+<span style="align-self: flex-start; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{r.matchBg}}; color: {{r.matchFg}}">{{r.matchText}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<!-- ============ PRODUCT DETAIL ============ -->
+<sc-if value="{{showProduct}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div><button class="inv-link" onClick="{{backToList}}">← All products</button></div>
+
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap">
+<div>
+<h1 style="margin: 0; font-size: 24px; font-weight: 700">{{pd.name}}</h1>
+<p style="margin: 4px 0 0; color: #5B6660; font-size: 14px">{{pd.catLabel}} · {{pd.mix}}</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; font-weight: 600; cursor: pointer"><input type="checkbox" checked="{{pd.priority}}" onChange="{{pd.togglePriority}}" style="width: 20px; height: 20px">Priority product (90-day alert)</label>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; font-weight: 600; cursor: pointer"><input type="checkbox" checked="{{pd.active}}" onChange="{{pd.toggleActive}}" style="width: 20px; height: 20px">Active</label>
+</div>
+</div>
+
+<div class="inv-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px">
+<sc-for list="{{pd.stats}}" as="st" hint-placeholder-count="4">
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 26px; font-weight: 500; color: {{st.color}}">{{st.value}}</span>
+<span style="font-size: 13px; font-weight: 600; color: #3F4943">{{st.label}}</span>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{pd.mismatch}}" hint-placeholder-val="{{false}}">
+<div style="background: #FBEFD5; color: #6B4200; border-radius: 10px; padding: 14px 18px; font-size: 14px; font-weight: 600">{{pd.mismatchText}}</div>
+</sc-if>
+
+<section style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">Stock by form, lot and location</h2>
+<div class="inv-hide-phone" style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; min-width: 520px; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #5B6660; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em">
+<th style="padding: 8px 8px 8px 0; font-weight: 600">Form</th>
+<th style="padding: 8px; font-weight: 600">Lot</th>
+<th style="padding: 8px; font-weight: 600">Location</th>
+<th style="padding: 8px; font-weight: 600; text-align: right">Qty</th>
+<th style="padding: 8px 0 8px 8px; font-weight: 600">Testing</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{pd.lines}}" as="ln" hint-placeholder-count="4">
+<tr style="border-top: 1px solid #ECEFEC">
+<td style="padding: 10px 8px 10px 0; font-weight: 600">{{ln.form}}</td>
+<td style="padding: 10px 8px; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{ln.lot}}</td>
+<td style="padding: 10px 8px">{{ln.loc}}</td>
+<td style="padding: 10px 8px; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{ln.qty}}</td>
+<td style="padding: 10px 0 10px 8px"><span style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{ln.pillBg}}; color: {{ln.pillFg}}">{{ln.status}}</span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div class="inv-show-phone" style="flex-direction: column">
+<sc-for list="{{pd.lines}}" as="ln" hint-placeholder-count="4">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid #ECEFEC">
+<span style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-weight: 700">{{ln.form}} · {{ln.loc}}</span>
+<span style="font-size: 13px; color: #5B6660">Lot <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace">{{ln.lot}}</span></span>
+</span>
+<span style="display: flex; align-items: center; gap: 10px; flex-shrink: 0">
+<span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 18px">{{ln.qty}}</span>
+<span style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{ln.pillBg}}; color: {{ln.pillFg}}">{{ln.status}}</span>
+</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{pd.noLines}}" hint-placeholder-val="{{false}}">
+<div style="color: #5B6660; font-size: 14px">No stock on hand.</div>
+</sc-if>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">Forms and SKUs</h2>
+<span style="font-size: 13px; color: #5B6660">Min level sets the low-stock and refill alerts</span>
+</div>
+<div class="inv-hide-phone" style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; min-width: 560px; font-size: 14px">
+<thead>
+<tr style="text-align: left; color: #5B6660; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em">
+<th style="padding: 8px 8px 8px 0; font-weight: 600">Form</th>
+<th style="padding: 8px; font-weight: 600">Website SKU</th>
+<th style="padding: 8px; font-weight: 600">Home location</th>
+<th style="padding: 8px; font-weight: 600; text-align: right">On hand</th>
+<th style="padding: 8px 0 8px 8px; font-weight: 600">Min level</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{pd.variants}}" as="v" hint-placeholder-count="3">
+<tr style="border-top: 1px solid #ECEFEC">
+<td style="padding: 10px 8px 10px 0; font-weight: 600">{{v.form}}</td>
+<td style="padding: 10px 8px; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{v.sku}}</td>
+<td style="padding: 10px 8px">{{v.home}}</td>
+<td style="padding: 10px 8px; text-align: right; font-family: 'IBM Plex Mono', ui-monospace, monospace">{{v.onHand}}</td>
+<td style="padding: 6px 0 6px 8px"><input type="number" min="0" aria-label="{{v.minLabel}}" value="{{v.min}}" onChange="{{v.onMin}}" style="width: 90px; min-height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid {{v.minBorder}}; background: #FFFFFF; color: #17201B; font-size: 15px; box-sizing: border-box"></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div class="inv-show-phone" style="flex-direction: column">
+<sc-for list="{{pd.variants}}" as="v" hint-placeholder-count="3">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #ECEFEC">
+<span style="display: flex; flex-direction: column; min-width: 0">
+<span style="font-weight: 700">{{v.form}}</span>
+<span style="font-size: 13px; color: #5B6660; font-family: 'IBM Plex Mono', ui-monospace, monospace; overflow-wrap: anywhere">{{v.sku}}</span>
+<span style="font-size: 13px; color: #5B6660">{{v.home}} · {{v.onHand}} on hand</span>
+</span>
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #3F4943; flex-shrink: 0">Min level
+<input type="number" min="0" value="{{v.min}}" onChange="{{v.onMin}}" style="width: 84px; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid {{v.minBorder}}; background: #FFFFFF; color: #17201B; box-sizing: border-box">
+</label>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">History</h2>
+<sc-if value="{{pd.noHistory}}" hint-placeholder-val="{{false}}">
+<div style="color: #5B6660; font-size: 14px">No recent movements for this product.</div>
+</sc-if>
+<sc-for list="{{pd.history}}" as="h" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; padding: 10px 0; border-top: 1px solid #ECEFEC">
+<span style="font-size: 14px"><strong>{{h.who}}</strong> · {{h.text}}</span>
+<span style="font-size: 12px; color: #5B6660">{{h.time}}</span>
+</div>
+</sc-for>
+</section>
+</div>
+</sc-if>
+
+<!-- ============ BUSINESSES ============ -->
+<sc-if value="{{showBusinesses}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap">
+<div>
+<h1 style="margin: 0; font-size: 22px; font-weight: 700">Businesses</h1>
+<p style="margin: 4px 0 0; color: #5B6660; font-size: 14px">{{bizCountText}} · each has its own products, stock, alerts and daily email</p>
+</div>
+<button onClick="{{toggleAddBiz}}" aria-expanded="{{showAddBiz}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: none; background: #1D4ED8; color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer">Add business</button>
+</div>
+
+<sc-if value="{{showNewKey}}" hint-placeholder-val="{{false}}">
+<div style="background: #FFFFFF; border: 2px solid #1D4ED8; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<div>
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">Website API key for {{newKeyName}}</h2>
+<p style="margin: 4px 0 0; font-size: 14px; color: #6B4200; font-weight: 600">Copy it now and give it to whoever connects the website. It won’t be shown again.</p>
+</div>
+<code style="display: block; padding: 12px 14px; background: #F3F4F1; border: 1px solid #DADFDA; border-radius: 8px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; user-select: all">{{newKeyValue}}</code>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<button onClick="{{copyKey}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: none; background: #1D4ED8; color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer">Copy key</button>
+<button onClick="{{dismissKey}}" style="min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid #DADFDA; background: #FFFFFF; color: #17201B; font-size: 14px; cursor: pointer">I’ve saved it</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showAddBiz}}" hint-placeholder-val="{{false}}">
+<div style="background: #FFFFFF; border: 1px solid #DADFDA; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<h2 style="margin: 0; font-size: 16px; font-weight: 700">Add a business</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Business name
+<input value="{{nbName}}" onChange="{{onNbName}}" placeholder="e.g. Business C" style="min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px; box-sizing: border-box">
+</label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: #3F4943">Mainly sells
+<select value="{{nbType}}" onChange="{{onNbType}}" style="min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid #B9C1BB; background: #FFFFFF; color: #17201B; font-size: 15px">
+<option value="Peptides">Peptides</option>
+<option value="Skin care">Skin care</option>
+<option value="Pre-workouts">Pre-workouts</option>
+<option value="Mixed">Mixed</option>
+</select>
+</label>
+</div>
+<fieldset style="border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px">
+<legend style="font-size: 13px; font-weight: 600; color: #3F4943; padding: 0; margin-bottom: 6px">Managers (you’re added automatically)</legend>
+<div style="display: flex; gap: 18px; flex-wrap: wrap">
+<sc-for list="{{nbMgrOptions}}" as="m" hint-placeholder-count="3">
+<label style="display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; cursor: pointer"><input type="checkbox" checked="{{m.checked}}" onChange="{{m.toggle}}" style="width: 20px; height: 20px">{{m.name}}</label>
+</sc-for>
+</div>
+</fieldset>
+<label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; cursor: pointer"><input type="checkbox" checked="{{nbKey}}" onChange="{{onNbKey}}" style="width: 20px; height: 20px">Create a website API key now, so its website can send paid orders</label>
+<div style="display: flex; gap: 10px; flex-wrap: wrap">
+<button onClick="{{createBiz}}" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: none; background: #1D4ED8; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer">Create business</button>
+<button onClick="{{toggleAddBiz}}" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: 1px solid #DADFDA; background: #FFFFFF; color: #17201B; font-size: 15px; cursor: pointer">Cancel</button>
+</div>
+</div>
+</sc-if>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px">
+<sc-for list="{{bizCards}}" as="bc" hint-placeholder-count="2">
+<div style="background: #FFFFFF; border: 2px solid {{bc.border}}; border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px">
+<div>
+<h2 style="margin: 0; font-size: 17px; font-weight: 700">{{bc.name}}</h2>
+<p style="margin: 2px 0 0; font-size: 13px; color: #5B6660">{{bc.type}} · {{bc.productCount}}</p>
+</div>
+<sc-if value="{{bc.isCurrent}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E6ECFB; color: #1E3A8A; white-space: nowrap">Open now</span>
+</sc-if>
+</div>
+<div style="font-size: 14px"><strong>Managers:</strong> {{bc.managersText}}</div>
+<div><span style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: {{bc.keyBg}}; color: {{bc.keyFg}}">{{bc.keyText}}</span></div>
+<sc-if value="{{bc.editing}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 12px; background: #F3F4F1; border-radius: 8px">
+<sc-for list="{{bc.mgrOptions}}" as="m" hint-placeholder-count="4">
+<label style="display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 14px; cursor: pointer"><input type="checkbox" checked="{{m.checked}}" disabled="{{m.disabled}}" onChange="{{m.toggle}}" style="width: 20px; height: 20px">{{m.name}}</label>
+</sc-for>
+</div>
+</sc-if>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<sc-if value="{{bc.notCurrent}}" hint-placeholder-val="{{true}}">
+<button onClick="{{bc.openBiz}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: none; background: #1D4ED8; color: #FFFFFF; font-size: 14px; font-weight: 600; cursor: pointer">Open</button>
+</sc-if>
+<button onClick="{{bc.toggleEdit}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #1D4ED8; background: #FFFFFF; color: #1D4ED8; font-size: 14px; font-weight: 600; cursor: pointer">{{bc.editLabel}}</button>
+<sc-if value="{{bc.noKey}}" hint-placeholder-val="{{false}}">
+<button onClick="{{bc.makeKey}}" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #1D4ED8; background: #FFFFFF; color: #1D4ED8; font-size: 14px; font-weight: 600; cursor: pointer">Create API key</button>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      biz: 'A', view: 'dashboard', productId: null, filter: null, panel: null,
+      reviewed: {}, deltas: {}, extraLots: {}, resolved: {}, logs: {}, prio: {}, active: {}, mins: {},
+      breakId: '', breakPkg: 'kit', breakTo: 'Rack A',
+      rcvRef: '', rcvVariant: '', rcvLot: '', rcvQty: '', rcvLoc: '',
+      q: '', fCat: 'all', fLoc: 'all', fPrio: false, fInactive: false, sort: 'name',
+      toast: '', toastBad: false, seq: 1,
+      newBiz: [], bizManagers: {}, editMgr: null, showAddBiz: false, newKey: null,
+      nbName: '', nbType: 'Peptides', nbMgrs: {}, nbKey: true
+    };
+  }
+  data(biz) {
+    if (biz !== 'A' && biz !== 'B') {
+      return { products: [], refill: [], low: [], count: [], lots: [], cancelled: [], log: [] };
+    }
+    if (biz === 'B') {
+      return {
+        products: [
+          { id: 'b1', name: 'Vitamin C serum 30ml', cat: 'skin_care', prio: true, units: 60, avg: 1.5, lot: 'VC-0812', home: 'D3' },
+          { id: 'b2', name: 'Retinol cream 50ml', cat: 'skin_care', prio: true, units: 120, avg: 1.1, lot: 'RC-0730', home: 'D3' },
+          { id: 'b3', name: 'Hyaluronic serum 30ml', cat: 'skin_care', prio: true, units: 6, avg: 0.8, lot: 'HS-0704', home: 'D3', oldDiff: 4 },
+          { id: 'b4', name: 'Peptide eye cream 15ml', cat: 'skin_care', prio: true, units: 95, avg: 0.7, lot: 'PE-0815', home: 'D6' },
+          { id: 'b5', name: 'Cleansing balm 100ml', cat: 'skin_care', prio: false, units: 40, avg: 0.5, lot: 'CB-0801', home: 'D2' }
+        ],
+        refill: [],
+        low: [{ name: 'Hyaluronic serum 30ml', info: 'D3 · 6 units (min 10)' }],
+        count: [{ name: 'Hyaluronic serum 30ml', info: 'D3 count on 19 Oct · off by 4' }],
+        lots: [{ id: 'bl1', rowId: 'b1', pkg: 'unit', product: 'Vitamin C serum 30ml', lot: 'VC-1009', days: 12, qty: 80 }],
+        cancelled: [],
+        log: [
+          { who: 'Website', text: 'Sold Retinol cream 50ml × 2 · Order #3120', time: 'Today 10:02' },
+          { who: 'Sam', text: 'Received Lot VC-1009 · Vitamin C serum 30ml · 80 units', time: '9 Oct 11:40' },
+          { who: 'Alex', text: 'Stock count D3 · Hyaluronic serum 30ml −4 · count correction', time: '19 Oct 16:10' }
+        ]
+      };
+    }
+    const P = (id, name, kits, half, loose, avg, lot, extra) => Object.assign({ id, name, cat: 'peptide', prio: true, kits, half, loose, avg, lot }, extra || {});
+    return {
+      products: [
+        P('p1', 'BPC-157 10mg', 48, 6, 30, 5.2, '2408B'),
+        P('p2', 'BPC-157 5mg', 27, 4, 20, 4.1, '2408C'),
+        P('p3', 'TB-500 10mg', 18, 2, 30, 3.8, '2407F', { oldDiff: -10 }),
+        P('p4', 'GHK-Cu 50mg', 60, 2, 30, 4.0, '2408A'),
+        P('p5', 'Ipamorelin 5mg', 15, 2, 20, 2.6, '2409B'),
+        P('p6', 'CJC-1295 5mg', 12, 1, 25, 2.9, '2408E'),
+        P('p7', 'TB-500 5mg', 36, 4, 20, 2.2, '2408D'),
+        P('p8', 'Sermorelin 5mg', 22, 3, 25, 2.4, '2407C'),
+        P('p9', 'Epitalon 10mg', 10, 0, 20, 1.9, '2406A'),
+        P('p10', 'Tesamorelin 10mg', 7, 1, 15, 1.8, '2407A', { oldDiff: 5 }),
+        P('p11', 'BPC/TB blend 10mg', 26, 2, 30, 2.7, '2408F'),
+        { id: 'p12', name: 'Copper peptide serum 30ml', cat: 'skin_care', prio: true, units: 85, avg: 1.2, lot: 'CS-0801', home: 'D3' },
+        { id: 'p13', name: 'Peptide night cream 50ml', cat: 'skin_care', prio: true, units: 140, avg: 1.0, lot: 'NC-0722', home: 'D3' },
+        P('p14', 'Kisspeptin 10mg', 8, 1, 10, 0.9, '2406C'),
+        P('p15', 'Selank 10mg', 5, 1, 15, 1.1, '2407B'),
+        P('p16', 'Thymosin Alpha-1 5mg', 2, 0, 6, 0.4, '2405D', { prio: false }),
+        P('p17', 'MOTS-c 10mg', 14, 2, 12, 0.8, '2408G', { prio: false, oldDiff: 2 }),
+        P('p18', 'AOD-9604 5mg', 0, 0, 0, 0, '2402A', { prio: false, inactive: true })
+      ],
+      refill: [
+        { name: 'Kisspeptin 10mg', info: 'Rack C · 10 loose (min 12) · open a kit' },
+        { name: 'Tesamorelin 10mg', info: 'Rack A · 15 loose (min 20) · open a kit' },
+        { name: 'Selank 10mg', info: 'Rack C · 15 loose (min 20) · open a kit' }
+      ],
+      low: [{ name: 'Thymosin Alpha-1 5mg', info: 'Back 1 · 2 kits (min 4)' }],
+      count: [],
+      lots: [
+        { id: 'al1', rowId: 'p3', pkg: 'kit', product: 'TB-500 10mg', lot: '2409C', days: 46, qty: 20 },
+        { id: 'al2', rowId: 'p1', pkg: 'kit', product: 'BPC-157 10mg', lot: '2410A', days: 22, qty: 30 },
+        { id: 'al3', rowId: 'p4', pkg: 'kit', product: 'GHK-Cu 50mg', lot: '2410F', days: 9, qty: 40 }
+      ],
+      cancelled: [
+        { id: 'c1', order: '#8841', item: 'BPC-157 10mg kit × 1', when: 'Paid 20 Oct · cancelled 20 Oct' },
+        { id: 'c2', order: '#8857', item: 'Ipamorelin 5mg vial × 3', when: 'Paid 20 Oct · refunded 21 Oct' }
+      ],
+      log: [
+        { who: 'Website', text: 'Sold BPC-157 10mg kit × 1 · Order #8862', time: 'Today 9:42' },
+        { who: 'Alex', text: 'Broke down 1 kit of TB-500 5mg · Back 1 → Rack A', time: 'Today 9:15' },
+        { who: 'Sam', text: 'Marked Lot 2409B (Ipamorelin 5mg) Passed', time: 'Today 8:50' },
+        { who: 'Website', text: 'Sold GHK-Cu 50mg vial × 4 · Order #8860', time: 'Yesterday 17:31' },
+        { who: 'Jordan', text: 'Received Lot 2410F · GHK-Cu 50mg · 40 kits', time: 'Yesterday 14:05' },
+        { who: 'Alex', text: 'Adjustment · Thymosin Alpha-1 5mg −1 kit · damaged', time: 'Yesterday 11:20' }
+      ]
+    };
+  }
+  componentWillUnmount() { if (this.t) clearTimeout(this.t); }
+  flash(msg, bad) {
+    if (this.t) clearTimeout(this.t);
+    this.setState({ toast: msg, toastBad: !!bad });
+    this.t = setTimeout(() => this.setState({ toast: '' }), 4500);
+  }
+  pkgLabel(pkg) { return pkg === 'kit' ? 'kits' : pkg === 'half' ? 'half kits' : pkg === 'vial' ? 'vials' : 'units'; }
+  homeOf(pkg) { return pkg === 'kit' || pkg === 'half' ? 'Back 1' : pkg === 'vial' ? 'Rack A' : 'D3'; }
+  skuBase(name) { return name.toUpperCase().replace(/[^A-Z0-9]+/g, '').slice(0, 10); }
+  renderVals() {
+    const s = this.state;
+    const biz = s.biz;
+    const D = this.data(biz);
+    const bd = s.deltas[biz] || {};
+    const prioO = s.prio[biz] || {};
+    const actO = s.active[biz] || {};
+    const minO = s.mins[biz] || {};
+    const set = (key, val) => { const o = Object.assign({}, s[key]); o[biz] = val; return o; };
+    const addLog = (entry, extra) => this.setState(Object.assign({ logs: set('logs', [entry].concat(s.logs[biz] || [])) }, extra || {}));
+    const catNames = { peptide: 'Peptide', skin_care: 'Skin care', pre_workout: 'Pre-workout' };
+    const allLog = (s.logs[biz] || []).concat(D.log);
+
+    const resolved = s.resolved[biz] || {};
+    const allLots = D.lots.concat(s.extraLots[biz] || []);
+    const openLots = allLots.filter((l) => !resolved[l.id]);
+    const passedExtra = allLots.filter((l) => resolved[l.id] === 'passed');
+
+    const rows = D.products.map((r) => {
+      const d = Object.assign({ kits: 0, half: 0, loose: 0, units: 0 }, bd[r.id]);
+      const isUnit = r.units !== undefined;
+      const kits = isUnit ? 0 : r.kits + d.kits;
+      const half = isUnit ? 0 : r.half + d.half;
+      const loose = isUnit ? 0 : r.loose + d.loose;
+      const total = isUnit ? r.units + d.units : kits * 10 + half * 5 + loose;
+      const hasSales = r.avg > 0;
+      const cover = hasSales ? Math.floor(total / r.avg) : null;
+      let status = 'OK', pillBg = '#E3F1E6', pillFg = '#1E5B31';
+      if (!hasSales) { status = 'No sales'; pillBg = '#ECEFEC'; pillFg = '#3F4943'; }
+      else if (cover < 60) { status = 'Reorder'; pillBg = '#FBE3E0'; pillFg = '#9B2219'; }
+      else if (cover < 90) { status = 'Watch'; pillBg = '#FBEFD5'; pillFg = '#6B4200'; }
+      const mix = isUnit ? total + ' units' : kits + ' kits · ' + half + ' half · ' + loose + ' vials';
+      const priority = prioO[r.id] !== undefined ? prioO[r.id] : r.prio;
+      const active = actO[r.id] !== undefined ? actO[r.id] : !r.inactive;
+      const testing = openLots.filter((l) => l.rowId === r.id);
+      const testingUnits = testing.reduce((sum, l) => sum + l.qty * (l.pkg === 'kit' ? 10 : l.pkg === 'half' ? 5 : 1), 0);
+      const testingText = testing.length ? '+' + testing.map((l) => l.qty + ' ' + this.pkgLabel(l.pkg)).join(', ') : '—';
+      const oldDiff = r.oldDiff || 0;
+      const oldTotal = total + oldDiff;
+      // physical breakdown
+      const lines = [];
+      if (isUnit) { if (total > 0) lines.push({ form: 'Unit', lot: r.lot, loc: r.home, qty: total, passed: true }); }
+      else {
+        if (kits > 0) lines.push({ form: 'Kit', lot: r.lot, loc: 'Back 1', qty: kits, passed: true });
+        if (half > 0) lines.push({ form: 'Half kit', lot: r.lot, loc: 'Back 1', qty: half, passed: true });
+        const a = Math.ceil(loose * 0.6), c = loose - a;
+        if (a > 0) lines.push({ form: 'Vial', lot: r.lot, loc: 'Rack A', qty: a, passed: true });
+        if (c > 0) lines.push({ form: 'Vial', lot: r.lot, loc: 'Rack C', qty: c, passed: true });
+      }
+      testing.forEach((l) => lines.push({ form: l.pkg === 'kit' ? 'Kit' : l.pkg === 'half' ? 'Half kit' : l.pkg === 'vial' ? 'Vial' : 'Unit', lot: l.lot, loc: l.loc || this.homeOf(l.pkg), qty: l.qty, passed: false }));
+      const locs = lines.map((l) => l.loc);
+      return {
+        id: r.id, name: r.name, cat: r.cat, isUnit, kits, half, loose, total, avg: r.avg,
+        avgText: hasSales ? r.avg.toFixed(1) : '—', cover, coverText: hasSales ? String(cover) : '—',
+        status, pillBg, pillFg, mix, priority, active, testingText, testingUnits, oldDiff, oldTotal, lines, locs, home: r.home,
+        open: () => this.setState({ view: 'product', productId: r.id, toast: '' })
+      };
+    });
+    const activeRows = rows.filter((r) => r.active);
+    const priorityRows = activeRows.filter((r) => r.priority);
+
+    const testLots = openLots.map((l) => {
+      const over = l.days > 40;
+      return Object.assign({}, l, {
+        status: over ? 'Overdue' : 'In testing',
+        pillBg: over ? '#FBE3E0' : '#E6ECFB', pillFg: over ? '#9B2219' : '#1E3A8A',
+        qtyText: l.qty + ' ' + this.pkgLabel(l.pkg),
+        pass: () => {
+          const d = Object.assign({}, bd);
+          const cur = Object.assign({ kits: 0, half: 0, loose: 0, units: 0 }, d[l.rowId]);
+          if (l.pkg === 'kit') cur.kits += l.qty; else if (l.pkg === 'half') cur.half += l.qty; else if (l.pkg === 'vial') cur.loose += l.qty; else cur.units += l.qty;
+          d[l.rowId] = cur;
+          const r = Object.assign({}, resolved); r[l.id] = 'passed';
+          addLog({ who: 'You', text: 'Marked Lot ' + l.lot + ' (' + l.product + ') Passed · now sellable', time: 'Just now' }, { deltas: set('deltas', d), resolved: set('resolved', r) });
+          this.flash('Lot ' + l.lot + ' passed. ' + l.qty + ' ' + this.pkgLabel(l.pkg) + ' of ' + l.product + ' are now sellable.');
+        },
+        fail: () => {
+          const r = Object.assign({}, resolved); r[l.id] = 'failed';
+          addLog({ who: 'You', text: 'Marked Lot ' + l.lot + ' (' + l.product + ') Failed · blocked from sale', time: 'Just now' }, { resolved: set('resolved', r) });
+          this.flash('Lot ' + l.lot + ' failed and is blocked from sale.', true);
+        }
+      });
+    });
+    const overdue = testLots.filter((l) => l.days > 40);
+
+    const below = priorityRows.filter((r) => r.cover !== null && r.cover < 90).map((r) => ({ name: r.name, info: r.cover + ' days of cover · ' + r.total + (r.isUnit ? ' units' : ' vials') }));
+    const groups = {
+      cover: { label: 'Below 90-day cover', title: 'Priority products below 90 days of cover', items: below },
+      refill: { label: 'Packing station refill', title: 'Loose vials running low', items: D.refill },
+      low: { label: 'Low stock', title: 'Other products below minimum', items: D.low },
+      testing: { label: 'Testing overdue', title: 'Lots in testing over 40 days', items: overdue.map((l) => ({ name: l.product, info: 'Lot ' + l.lot + ' · ' + l.days + ' days in testing' })) },
+      count: { label: 'Count mismatch', title: 'Stock counts off by more than 2', items: D.count }
+    };
+    const alerts = Object.keys(groups).map((k) => {
+      const g = groups[k], sel = s.filter === k, has = g.items.length > 0;
+      return {
+        label: g.label, count: g.items.length, pressed: sel ? 'true' : 'false',
+        border: sel ? '#1D4ED8' : (has ? '#E7B4AD' : '#DADFDA'),
+        bg: sel ? '#EEF2FD' : '#FFFFFF', numColor: has ? '#9B2219' : '#1E5B31',
+        pick: () => this.setState({ filter: sel ? null : k })
+      };
+    });
+    const activeAlert = s.filter ? groups[s.filter] : null;
+
+    const reviewed = s.reviewed[biz] || [];
+    const cancelled = D.cancelled.filter((c) => reviewed.indexOf(c.id) === -1).map((c) => Object.assign({}, c, {
+      review: () => { this.setState({ reviewed: set('reviewed', reviewed.concat([c.id])) }); this.flash('Order ' + c.order + ' marked reviewed.'); }
+    }));
+
+    // Break down
+    const peptides = activeRows.filter((r) => !r.isUnit);
+    const breakOptions = peptides.map((r) => ({ id: r.id, label: r.name + ' (' + r.kits + ' kits, ' + r.half + ' half)' }));
+    const chosen = peptides.find((r) => r.id === s.breakId) || peptides[0];
+    const size = s.breakPkg === 'kit' ? 10 : 5;
+    const pkgName = s.breakPkg === 'kit' ? 'kit' : 'half kit';
+
+    // Receive
+    const rcvOptions = [];
+    activeRows.forEach((r) => {
+      if (r.isUnit) rcvOptions.push({ id: r.id + '|unit', label: r.name + ' · unit' });
+      else ['kit', 'half', 'vial'].forEach((p) => rcvOptions.push({ id: r.id + '|' + p, label: r.name + ' · ' + (p === 'kit' ? 'kit' : p === 'half' ? 'half kit' : 'vial') }));
+    });
+    const rcvVariant = rcvOptions.some((o) => o.id === s.rcvVariant) ? s.rcvVariant : (rcvOptions[0] ? rcvOptions[0].id : '');
+    const rcvPkg = rcvVariant ? rcvVariant.split('|')[1] : 'kit';
+
+    const open = (p) => () => this.setState({ panel: s.panel === p ? null : p });
+    const btn = (p) => s.panel === p ? ['#1D4ED8', '#FFFFFF', 'true'] : ['#FFFFFF', '#1D4ED8', 'false'];
+    const [breakBg, breakFg, breakPressed] = btn('break');
+    const [receiveBg, receiveFg, receivePressed] = btn('receive');
+    const [testingBg, testingFg, testingPressed] = btn('testing');
+
+    // Products list
+    const q = s.q.trim().toLowerCase();
+    let list = rows.filter((r) => s.fInactive || r.active);
+    if (s.fCat !== 'all') list = list.filter((r) => r.cat === s.fCat);
+    if (s.fLoc !== 'all') list = list.filter((r) => r.locs.indexOf(s.fLoc) !== -1);
+    if (s.fPrio) list = list.filter((r) => r.priority);
+    if (q) list = list.filter((r) => (r.name + ' ' + this.skuBase(r.name)).toLowerCase().indexOf(q) !== -1 || this.skuBase(r.name).toLowerCase().indexOf(q.replace(/[^a-z0-9]/g, '')) !== -1);
+    const big = 1e9;
+    if (s.sort === 'cover') list = list.slice().sort((a, b) => (a.cover === null ? big : a.cover) - (b.cover === null ? big : b.cover));
+    else if (s.sort === 'total') list = list.slice().sort((a, b) => a.total - b.total);
+    else list = list.slice().sort((a, b) => a.name.localeCompare(b.name));
+    const listRows = list.map((r) => Object.assign({}, r, {
+      star: r.priority ? '★' : '', starLabel: r.priority ? 'Priority product' : '',
+      catLabel: catNames[r.cat], inactiveText: r.active ? '' : ' · Inactive', opacity: r.active ? '1' : '0.6',
+      unitWord: r.isUnit ? 'units' : 'vials', hasTesting: r.testingUnits > 0,
+      matchText: r.oldDiff === 0 ? 'Matches' : 'Website ' + r.oldTotal + ' (' + (r.oldDiff > 0 ? '+' : '') + r.oldDiff + ')',
+      matchBg: r.oldDiff === 0 ? '#E3F1E6' : '#FBEFD5', matchFg: r.oldDiff === 0 ? '#1E5B31' : '#6B4200'
+    }));
+    const mismatches = rows.filter((r) => r.active && r.oldDiff !== 0).length;
+
+    // Product detail
+    const cur = rows.find((r) => r.id === s.productId);
+    let pd = { name: '', catLabel: '', mix: '', priority: false, active: true, stats: [], lines: [], variants: [], history: [], noLines: true, noHistory: true, mismatch: false, mismatchText: '', togglePriority: () => {}, toggleActive: () => {} };
+    if (cur) {
+      const forms = cur.isUnit ? [['unit', 'Unit', cur.home, cur.total, 10]] : [['kit', 'Kit (10 vials)', 'Back 1', cur.kits, 4], ['half', 'Half kit (5 vials)', 'Back 1', cur.half, 2], ['vial', 'Vial', 'Rack A', cur.loose, 20]];
+      const base = this.skuBase(cur.name);
+      const variants = forms.map(([key, form, home, onHand, defMin]) => {
+        const vid = cur.id + '|' + key;
+        const min = minO[vid] !== undefined ? minO[vid] : String(defMin);
+        const low = Number(min) > 0 && onHand < Number(min);
+        return {
+          form, home, onHand, min, sku: base + '-' + key.toUpperCase(), minLabel: 'Min level for ' + form,
+          minBorder: low ? '#9B2219' : '#B9C1BB',
+          onMin: (e) => { const m = Object.assign({}, minO); m[vid] = e.target.value; this.setState({ mins: set('mins', m) }); }
+        };
+      });
+      const history = allLog.filter((e) => e.text.indexOf(cur.name) !== -1);
+      const coverColor = cur.cover === null ? '#3F4943' : cur.cover < 60 ? '#9B2219' : cur.cover < 90 ? '#6B4200' : '#1E5B31';
+      pd = {
+        name: cur.name, catLabel: catNames[cur.cat] + (cur.active ? '' : ' · Inactive'), mix: cur.mix,
+        priority: cur.priority, active: cur.active,
+        stats: [
+          { label: cur.isUnit ? 'Sellable units' : 'Sellable vials (equivalent)', value: cur.total, color: '#17201B' },
+          { label: 'In testing', value: cur.testingUnits, color: '#1E3A8A' },
+          { label: 'Sales per day (60 days)', value: cur.avgText, color: '#17201B' },
+          { label: 'Days of cover', value: cur.coverText, color: coverColor }
+        ],
+        lines: cur.lines.map((l) => Object.assign({}, l, { status: l.passed ? 'Passed' : 'In testing', pillBg: l.passed ? '#E3F1E6' : '#E6ECFB', pillFg: l.passed ? '#1E5B31' : '#1E3A8A' })),
+        noLines: cur.lines.length === 0,
+        variants, history, noHistory: history.length === 0,
+        mismatch: cur.oldDiff !== 0,
+        mismatchText: 'Website count is ' + cur.oldTotal + ', new system has ' + cur.total + ' (' + (cur.oldDiff > 0 ? '+' : '') + cur.oldDiff + '). Worth a stock count to confirm which is right.',
+        togglePriority: (e) => {
+          const on = e.target.checked;
+          if (on && priorityRows.length >= 15) this.flash('You already have 15 priority products. Consider switching one off.', true);
+          const p = Object.assign({}, prioO); p[cur.id] = on;
+          addLog({ who: 'You', text: (on ? 'Added ' : 'Removed ') + cur.name + (on ? ' to' : ' from') + ' priority products', time: 'Just now' }, { prio: set('prio', p) });
+        },
+        toggleActive: (e) => {
+          const on = e.target.checked;
+          const a = Object.assign({}, actO); a[cur.id] = on;
+          addLog({ who: 'You', text: (on ? 'Reactivated ' : 'Deactivated ') + cur.name, time: 'Just now' }, { active: set('active', a) });
+          this.flash(on ? cur.name + ' is active again.' : cur.name + ' is now inactive. Its history is kept.');
+        }
+      };
+    }
+
+    // Businesses
+    const team = ['You', 'Alex', 'Sam', 'Jordan'];
+    const randomKey = () => { let k = 'inv_'; for (let i = 0; i < 48; i++) k += '0123456789abcdef'[Math.floor(Math.random() * 16)]; return k; };
+    const baseBiz = [
+      { id: 'A', name: 'Business A · Peptides', type: 'Peptides', managers: ['You', 'Alex', 'Sam', 'Jordan'], key: 'Connected · key created 3 Sep', hasKey: true },
+      { id: 'B', name: 'Business B · Skin care', type: 'Skin care', managers: ['You', 'Sam'], key: 'Connected · key created 12 Sep', hasKey: true }
+    ];
+    const allBiz = baseBiz.concat(s.newBiz);
+    const bizOptions = allBiz.map((b) => ({ id: b.id, name: b.name }));
+    const bizCards = allBiz.map((b) => {
+      const mgrs = s.bizManagers[b.id] || b.managers;
+      const editing = s.editMgr === b.id;
+      const isCurrent = b.id === biz;
+      return {
+        name: b.name, type: b.type, isCurrent, notCurrent: !isCurrent,
+        productCount: this.data(b.id).products.length + ' products',
+        managersText: mgrs.join(', '), keyText: b.key,
+        keyBg: b.hasKey ? '#E3F1E6' : '#FBEFD5', keyFg: b.hasKey ? '#1E5B31' : '#6B4200', noKey: !b.hasKey,
+        border: isCurrent ? '#1D4ED8' : '#DADFDA',
+        openBiz: () => this.setState({ biz: b.id, view: 'dashboard', filter: null, panel: null, productId: null, breakId: '', rcvVariant: '', toast: '' }),
+        editing, editLabel: editing ? 'Done' : 'Edit managers',
+        toggleEdit: () => this.setState({ editMgr: editing ? null : b.id }),
+        makeKey: () => {
+          const key = randomKey();
+          this.setState({ newBiz: s.newBiz.map((x) => x.id === b.id ? Object.assign({}, x, { key: 'Connected · key created today', hasKey: true }) : x), newKey: { name: b.name, key } });
+        },
+        mgrOptions: team.map((n) => ({
+          name: n, checked: mgrs.indexOf(n) !== -1, disabled: n === 'You',
+          toggle: (e) => {
+            const on = e.target.checked;
+            const next = team.filter((x) => x === n ? on : mgrs.indexOf(x) !== -1);
+            const m = Object.assign({}, s.bizManagers); m[b.id] = next;
+            this.setState({ bizManagers: m });
+          }
+        }))
+      };
+    });
+    const nbMgrOptions = team.filter((n) => n !== 'You').map((n) => ({
+      name: n, checked: !!s.nbMgrs[n],
+      toggle: (e) => { const m = Object.assign({}, s.nbMgrs); m[n] = e.target.checked; this.setState({ nbMgrs: m }); }
+    }));
+    const createBiz = () => {
+      const name = s.nbName.trim();
+      if (!name) { this.flash('Give the business a name.', true); return; }
+      if (allBiz.some((b) => b.name.toLowerCase() === name.toLowerCase())) { this.flash('A business with that name already exists.', true); return; }
+      const id = 'N' + s.seq;
+      const managers = ['You'].concat(team.filter((n) => n !== 'You' && s.nbMgrs[n]));
+      const key = s.nbKey ? randomKey() : null;
+      this.setState({
+        newBiz: s.newBiz.concat([{ id, name, type: s.nbType, managers, key: key ? 'Connected · key created today' : 'No website key yet', hasKey: !!key }]),
+        seq: s.seq + 1, showAddBiz: false, newKey: key ? { name, key } : null,
+        nbName: '', nbType: 'Peptides', nbMgrs: {}, nbKey: true
+      });
+      this.flash(name + ' added. It’s in the business switcher, ready for products.');
+    };
+
+    const view = s.view;
+    const navItems = [['dashboard', 'Dashboard'], ['products', 'Products'], ['businesses', 'Businesses']].map(([v, label]) => {
+      const on = view === v || (v === 'products' && view === 'product');
+      return { label, current: on ? 'page' : 'false', line: on ? '#7AA2FF' : 'transparent', color: on ? '#FFFFFF' : '#C9D0CB', go: () => this.setState({ view: v, toast: '' }) };
+    });
+
+    return {
+      biz, navItems,
+      onBiz: (e) => this.setState({ biz: e.target.value, filter: null, panel: null, toast: '', breakId: '', rcvVariant: '', productId: null, view: view === 'product' ? 'products' : view }),
+      showDash: view === 'dashboard', showProducts: view === 'products', showProduct: view === 'product' && !!cur,
+      alerts,
+      showDetail: !!activeAlert, detailTitle: activeAlert ? activeAlert.title : '', detailItems: activeAlert ? activeAlert.items : [],
+      detailEmpty: !!activeAlert && activeAlert.items.length === 0,
+      closeDetail: () => this.setState({ filter: null }),
+      cancelled, noCancelled: cancelled.length === 0,
+      priorityRows,
+      testLots, noTestingLots: testLots.length === 0,
+      lotSummary: testLots.length === 0 ? 'Nothing waiting on results' : testLots.length + ' waiting · oldest ' + Math.max.apply(null, testLots.map((l) => l.days)) + ' days',
+      activity: allLog.slice(0, 8),
+      openBreak: open('break'), openReceive: open('receive'), openTesting: open('testing'),
+      breakBg, breakFg, breakPressed, receiveBg, receiveFg, receivePressed, testingBg, testingFg, testingPressed,
+      closePanel: () => this.setState({ panel: null }),
+      showBreak: s.panel === 'break', showReceive: s.panel === 'receive', showTesting: s.panel === 'testing',
+      noBreak: !chosen, hasBreak: !!chosen,
+      breakOptions, breakId: chosen ? chosen.id : '', breakPkg: s.breakPkg, breakTo: s.breakTo,
+      breakSummary: chosen ? 'Back 1: −1 ' + pkgName + ' of ' + chosen.name + '  →  ' + s.breakTo + ': +' + size + ' loose vials, same lot.' : '',
+      onBreakProduct: (e) => this.setState({ breakId: e.target.value }),
+      onBreakPkg: (e) => this.setState({ breakPkg: e.target.value }),
+      onBreakTo: (e) => this.setState({ breakTo: e.target.value }),
+      confirmBreak: () => {
+        if (!chosen) return;
+        const have = s.breakPkg === 'kit' ? chosen.kits : chosen.half;
+        if (have < 1) { this.flash('No sealed ' + pkgName + 's of ' + chosen.name + ' left in Back 1.', true); return; }
+        const d = Object.assign({}, bd);
+        const c = Object.assign({ kits: 0, half: 0, loose: 0, units: 0 }, d[chosen.id]);
+        if (s.breakPkg === 'kit') c.kits -= 1; else c.half -= 1;
+        c.loose += size; d[chosen.id] = c;
+        addLog({ who: 'You', text: 'Broke down 1 ' + pkgName + ' of ' + chosen.name + ' · Back 1 → ' + s.breakTo, time: 'Just now' }, { deltas: set('deltas', d), panel: null });
+        this.flash('Done: ' + size + ' vials of ' + chosen.name + ' added to ' + s.breakTo + '.');
+      },
+      rcvOptions, rcvVariant, rcvRef: s.rcvRef, rcvLot: s.rcvLot, rcvQty: s.rcvQty, rcvLoc: s.rcvLoc,
+      rcvHome: this.homeOf(rcvPkg),
+      onRcvRef: (e) => this.setState({ rcvRef: e.target.value }),
+      onRcvVariant: (e) => this.setState({ rcvVariant: e.target.value }),
+      onRcvLot: (e) => this.setState({ rcvLot: e.target.value }),
+      onRcvQty: (e) => this.setState({ rcvQty: e.target.value }),
+      onRcvLoc: (e) => this.setState({ rcvLoc: e.target.value }),
+      confirmReceive: () => {
+        const qty = parseInt(s.rcvQty, 10);
+        const lot = (s.rcvLot || '').trim();
+        if (!(s.rcvRef || '').trim()) { this.flash('Add a delivery reference.', true); return; }
+        if (!lot) { this.flash('Add the lot number from the delivery.', true); return; }
+        if (!(qty > 0)) { this.flash('Quantity must be at least 1.', true); return; }
+        if (!rcvVariant) { this.flash('Add a product to this business first.', true); return; }
+        const [rowId, pkg] = rcvVariant.split('|');
+        const row = rows.find((r) => r.id === rowId);
+        const loc = s.rcvLoc || this.homeOf(pkg);
+        const newLot = { id: 'new' + s.seq, rowId, pkg, product: row.name, lot, days: 0, qty, loc };
+        addLog({ who: 'You', text: 'Received Lot ' + lot + ' · ' + row.name + ' · ' + qty + ' ' + this.pkgLabel(pkg) + ' → ' + loc + ' · Ref ' + s.rcvRef.trim(), time: 'Just now' },
+          { extraLots: set('extraLots', (s.extraLots[biz] || []).concat([newLot])), seq: s.seq + 1, panel: null, rcvRef: '', rcvLot: '', rcvQty: '', rcvLoc: '' });
+        this.flash('Lot ' + lot + ' recorded and set to In testing. It becomes sellable once it passes.');
+      },
+      // products list
+      q: s.q, fCat: s.fCat, fLoc: s.fLoc, fPrio: s.fPrio, fInactive: s.fInactive, sort: s.sort,
+      onQ: (e) => this.setState({ q: e.target.value }),
+      onCat: (e) => this.setState({ fCat: e.target.value }),
+      onLoc: (e) => this.setState({ fLoc: e.target.value }),
+      onSort: (e) => this.setState({ sort: e.target.value }),
+      onPrio: (e) => this.setState({ fPrio: e.target.checked }),
+      onInactive: (e) => this.setState({ fInactive: e.target.checked }),
+      onAddProduct: () => this.flash('The Add product form is designed together with Bulk import, coming up next.'),
+      onImport: () => this.flash('Bulk import is the next screen we’ll design.'),
+      listRows, noResults: listRows.length === 0,
+      listSummary: activeRows.length + ' active · ' + priorityRows.length + ' priority · ' + (mismatches === 0 ? 'all match the website count' : mismatches + ' differ from the website count'),
+      // businesses
+      bizOptions, bizCards, showBusinesses: view === 'businesses',
+      bizCountText: allBiz.length + (allBiz.length === 1 ? ' business' : ' businesses'),
+      showAddBiz: s.showAddBiz,
+      toggleAddBiz: () => this.setState({ showAddBiz: !s.showAddBiz, newKey: null }),
+      nbName: s.nbName, nbType: s.nbType, nbKey: s.nbKey, nbMgrOptions,
+      onNbName: (e) => this.setState({ nbName: e.target.value }),
+      onNbType: (e) => this.setState({ nbType: e.target.value }),
+      onNbKey: (e) => this.setState({ nbKey: e.target.checked }),
+      createBiz,
+      showNewKey: !!s.newKey, newKeyName: s.newKey ? s.newKey.name : '', newKeyValue: s.newKey ? s.newKey.key : '',
+      copyKey: () => {
+        const k = s.newKey ? s.newKey.key : '';
+        try { navigator.clipboard.writeText(k).then(() => this.flash('API key copied.'), () => this.flash('Couldn’t copy automatically. Select the key and copy it.', true)); }
+        catch (err) { this.flash('Couldn’t copy automatically. Select the key and copy it.', true); }
+      },
+      dismissKey: () => this.setState({ newKey: null }),
+      // detail
+      pd, backToList: () => this.setState({ view: 'products', productId: null }),
+      showToast: !!s.toast, toast: s.toast,
+      toastBg: s.toastBad ? '#FBE3E0' : '#E3F1E6', toastFg: s.toastBad ? '#9B2219' : '#1E5B31'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authenticateBusiness } from "@/lib/inventory/auth";
+import { authorizeInbound } from "@/lib/inventory/inbound-guard";
 import { withTransaction } from "@/lib/inventory/db";
 import { InboundError, errorResponse } from "@/lib/inventory/errors";
 import { logInbound } from "@/lib/inventory/log";
@@ -20,11 +20,8 @@ const PaidOrderSchema = z.object({
 /** POST /api/inventory/inbound/orders  — a business website sends a PAID order. */
 export async function POST(req: Request) {
   const endpoint = "orders";
-  const auth = await authenticateBusiness(req);
-  if (!auth) {
-    await logInbound({ endpoint, statusCode: 401, error: "invalid or missing API key" });
-    return errorResponse(401, "Invalid or missing API key");
-  }
+  const auth = await authorizeInbound(req, endpoint);
+  if (auth instanceof Response) return auth;
 
   let body: unknown;
   try {

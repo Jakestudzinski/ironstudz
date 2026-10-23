@@ -58,9 +58,9 @@ export async function productTests() {
            values ($1,'sold',$2,$3,$4,312,'OLD-SALES', now() - interval '10 days'),
                   ($1,'sold',$2,$3,$4,999,'ANCIENT', now() - interval '90 days')`, [biz, vial, l1, loc["Rack A"]]);
 
-  let list = await listProducts(biz);
+  const list = await listProducts(biz);
   assert.equal(list.products.length, 1);
-  let row = list.products[0];
+  const row = list.products[0];
   assert.equal(formatMix(row.sellable, row.forms), "48 kits · 6 half · 30 vials");
   assert.equal(formatInTesting(row.inTesting), "+30 kits");
   assert.equal(row.total, 540);

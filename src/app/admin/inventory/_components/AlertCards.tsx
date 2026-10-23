@@ -28,8 +28,8 @@ export function AlertCards({ alerts }: { alerts: Alerts }) {
               key={k}
               type="button"
               className={`${styles.card} ${n ? styles.hasItems : ""}`}
-              aria-pressed={open === k}
-              aria-controls="dash-alert-detail"
+              aria-expanded={open === k}
+              aria-controls={open === k ? "dash-alert-detail" : undefined}
               onClick={() => setOpen(open === k ? null : k)}
             >
               <span className={`${styles.count} ${n ? styles.bad : styles.good}`}>{n}</span>
