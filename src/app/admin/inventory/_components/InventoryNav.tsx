@@ -17,10 +17,13 @@ const LINKS = [
   { href: "/admin/inventory/count", label: "Count", also: [] },
   { href: "/admin/inventory/movements", label: "History", also: [] },
   { href: "/admin/inventory/vial-weights", label: "Vial weights", also: [] },
+  { href: "/admin/inventory/settings", label: "Settings", also: [] },
 ];
+const OWNER_LINKS = [{ href: "/admin/inventory/businesses", label: "Businesses", also: [] }];
 
-export function InventoryNav() {
+export function InventoryNav({ isOwner }: { isOwner: boolean }) {
   const path = usePathname();
+  const links = isOwner ? [...LINKS, ...OWNER_LINKS] : LINKS;
   const nav = useRef<HTMLElement>(null);
   // On phones the tabs scroll sideways; keep the current one in view.
   useEffect(() => {
@@ -28,7 +31,7 @@ export function InventoryNav() {
   }, [path]);
   return (
     <nav aria-label="Inventory" className={styles.nav} ref={nav}>
-      {LINKS.map((l) => {
+      {links.map((l) => {
         const current =
           l.href === "/admin/inventory" ? path === l.href : [l.href, ...l.also].some((h) => path.startsWith(h));
         return (

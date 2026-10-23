@@ -2,6 +2,16 @@ import { pool } from "./db";
 
 export type BusinessSummary = { id: string; name: string };
 
+/**
+ * Owners are the site's Admin users. Only they can add businesses, choose managers, create accounts for new
+ * managers and create or revoke website API keys. Checked against the database on every request, so removing
+ * someone's Admin role takes effect straight away.
+ */
+export async function isOwner(userId: string): Promise<boolean> {
+  const { rows } = await pool.query(`SELECT role FROM "User" WHERE id = $1`, [userId]);
+  return rows[0]?.role === "ADMIN";
+}
+
 /** True if this user is a manager of the given (active) business. */
 export async function userCanManage(userId: string, businessId: string): Promise<boolean> {
   const { rowCount } = await pool.query(

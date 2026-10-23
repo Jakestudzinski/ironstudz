@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
 import "./inventory.css";
 import styles from "./layout.module.css";
+import ui from "./_components/ui.module.css";
 import { getInventoryContext } from "@/lib/inventory/context";
+import { isOwner } from "@/lib/inventory/owner";
+import { listAllBusinesses } from "@/lib/inventory/admin";
 import { BusinessSwitcher } from "./_components/BusinessSwitcher";
 import { InventoryNav } from "./_components/InventoryNav";
 import { SignOutButton } from "./_components/SignOutButton";
+import { BusinessesBoard } from "./businesses/BusinessesBoard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Inventory", robots: { index: false, follow: false } };
@@ -13,8 +17,32 @@ export const viewport = { width: "device-width", initialScale: 1, viewportFit: "
 
 export default async function InventoryLayout({ children }: { children: ReactNode }) {
   const { user, businesses, active } = await getInventoryContext();
+  const owner = await isOwner(user.id);
 
   if (!active) {
+    // An admin who doesn't manage any business yet gets the Businesses screen, so they can set one up.
+    if (owner) {
+      return (
+        <div className="inv-root">
+          <header className={styles.header}>
+            <div className={styles.headerInner}>
+              <p className={styles.title}>Inventory</p>
+              <div className={styles.account}>
+                <span className={styles.user}>{user.name ?? user.email ?? "Admin"}</span>
+                <SignOutButton />
+              </div>
+            </div>
+          </header>
+          <main className={styles.main}>
+            <div>
+              <h1 className={ui.heading}>Set up a business</h1>
+              <p className={ui.sub}>You’re a site admin but don’t manage any business yet. Add one, or add yourself as a manager of one.</p>
+            </div>
+            <BusinessesBoard businesses={await listAllBusinesses()} activeId={null} managedIds={[]} ownerId={user.id} />
+          </main>
+        </div>
+      );
+    }
     return (
       <div className="inv-root">
         <main className={styles.noAccess}>
@@ -39,7 +67,7 @@ export default async function InventoryLayout({ children }: { children: ReactNod
             <SignOutButton />
           </div>
         </div>
-        <InventoryNav />
+        <InventoryNav isOwner={owner} />
       </header>
       <main className={styles.main}>{children}</main>
     </div>

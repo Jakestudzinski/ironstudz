@@ -3,9 +3,10 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 // Pages/API that never require auth. Auth routes are always open.
-const PUBLIC_PATHS = ["/", "/login", "/register", "/maintenance"];
-// Inventory webhooks from business websites authenticate with their own API key, not a login.
-const PUBLIC_PREFIXES = ["/api/auth", "/api/register", "/api/inventory/inbound/orders", "/_next", "/favicon"];
+const PUBLIC_PATHS = ["/", "/login", "/maintenance"];
+// Inventory webhooks from business websites authenticate with their own API key, and the scheduled
+// daily-email job with CRON_SECRET, not a login.
+const PUBLIC_PREFIXES = ["/api/auth", "/api/inventory/inbound/orders", "/api/inventory/cron", "/_next", "/favicon"];
 
 function isPublic(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true;

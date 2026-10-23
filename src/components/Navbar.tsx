@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogIn, LogOut, UserPlus, User as UserIcon } from "lucide-react";
+import { LogIn, LogOut, User as UserIcon } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -49,13 +49,6 @@ export function Navbar() {
               >
                 <LogIn size={16} />
                 Sign in
-              </Link>
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-1 rounded-md bg-foreground px-3 py-1 text-background hover:opacity-90"
-              >
-                <UserPlus size={16} />
-                Sign up
               </Link>
             </>
           )}

@@ -1,0 +1,23 @@
+.keys { display: flex; flex-direction: column; gap: 12px; }
+.newKey {
+  display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 8px;
+  background: var(--inv-warn-bg); color: var(--inv-warn-fg);
+}
+.code {
+  font-family: var(--inv-mono); font-size: 14px; background: #fff; color: var(--inv-ink); padding: 10px 12px;
+  border-radius: 6px; border: 1px solid var(--inv-border); overflow-wrap: anywhere; user-select: all;
+}
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.keyRow { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.muted { color: var(--inv-muted); font-size: 13px; }
+.create { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.create > div { flex: 1 1 200px; max-width: 320px; }
+.danger {
+  min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--inv-bad-fg); background: var(--inv-bad-fg);
+  color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .create > div { max-width: none; }
+  .create > button { flex: 1 1 100%; }
+}

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -12,13 +11,6 @@ export default function HomePage() {
         updated automatically when website orders are paid.
       </p>
       <div className="flex flex-wrap gap-3 text-sm">
-        <Link
-          href="/register"
-          className="inline-flex items-center gap-1 rounded-md bg-foreground px-4 py-2 text-background hover:opacity-90"
-        >
-          Create an account
-          <ArrowRight size={16} />
-        </Link>
         <Link
           href="/login"
           className="inline-flex items-center gap-1 rounded-md border border-black/10 px-4 py-2 hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"

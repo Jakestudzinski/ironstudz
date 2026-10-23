@@ -79,6 +79,7 @@ model InvBusiness {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
   isActive  Boolean  @default(true) @map("is_active")
+  sells     String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   users         InvBusinessUser[]
@@ -92,6 +93,7 @@ model InvBusiness {
   alertSettings InvAlertSettings?
   stockCounts   InvStockCount[]
   preferences   InvUserPreference[]
+  emailSends    InvDailyEmailSend[]
 
   @@map("businesses")
 }
@@ -369,4 +371,21 @@ model InvLotStatusChange {
 
   @@index([lotId, changedAt(sort: Desc)], map: "lot_status_changes_lot_idx")
   @@map("lot_status_changes")
+}
+
+/// One daily email per business per Phoenix day.
+model InvDailyEmailSend {
+  id         BigInt      @id @default(autoincrement())
+  businessId String      @map("business_id") @db.Uuid
+  sendDate   DateTime    @map("send_date") @db.Date
+  status     String      @default("sending")
+  attempts   Int         @default(1)
+  recipients String[]    @default([])
+  error      String?
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  business   InvBusiness @relation(fields: [businessId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([businessId, sendDate])
+  @@map("daily_email_sends")
 }
