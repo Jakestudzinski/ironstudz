@@ -1,0 +1,105 @@
+name: CI
+
+# Required check for merging to main. Required status check name (set in the branch ruleset): "CI gate"
+# Rollout: SOP-029, docs in peptide-store/docs/CI.md.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: claude-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests and type ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Tests
+        run: npm test
+      - name: Type-error ratchet (fails only on NEW errors)
+        run: node scripts/ci/tsc-ratchet.mjs
+
+  risk:
+    name: Risk tier
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Compute tier
+        id: calc
+        run: |
+          base="origin/${{ github.base_ref }}"
+          tier=$(node scripts/ci/risk-tier.mjs --base "$base")
+          ruo=clean
+          echo "tier=$tier" >> "$GITHUB_OUTPUT"
+          echo "ruo=$ruo" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Risk tier: \`$tier\`"
+            echo ""
+            echo "- green: may auto-merge once CI passes"
+            echo "- yellow: second-reviewer pass, then merge after the objection window"
+            echo "- red: Jake approves"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Apply labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          TIER: ${{ steps.calc.outputs.tier }}
+          RUO: ${{ steps.calc.outputs.ruo }}
+        run: |
+          gh label create "risk:green"  --color 0E8A16 --description "Low risk: may auto-merge after CI" 2>/dev/null || true
+          gh label create "risk:yellow" --color FBCA04 --description "Medium risk: reviewer pass required" 2>/dev/null || true
+          gh label create "risk:red"    --color B60205 --description "High risk: Jake approves" 2>/dev/null || true
+          gh label create "ruo-review"  --color 5319E7 --description "Possible therapeutic claim in customer-facing copy" 2>/dev/null || true
+          for t in green yellow red; do
+            if [ "$t" != "$TIER" ]; then gh pr edit "$PR" --remove-label "risk:$t" 2>/dev/null || true; fi
+          done
+          gh pr edit "$PR" --add-label "risk:$TIER"
+          if [ "$RUO" = "ruo-review" ]; then
+            gh pr edit "$PR" --add-label "ruo-review"
+          else
+            gh pr edit "$PR" --remove-label "ruo-review" 2>/dev/null || true
+          fi
+
+  gate:
+    name: CI gate
+    if: always()
+    needs: [test, risk]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all jobs to pass
+        env:
+          TEST: ${{ needs.test.result }}
+          RISK: ${{ needs.risk.result }}
+        run: |
+          echo "test=$TEST risk=$RISK"
+          if [ "$TEST" != "success" ]; then exit 1; fi
+          if [ "$RISK" != "success" ] && [ "$RISK" != "skipped" ]; then exit 1; fi
