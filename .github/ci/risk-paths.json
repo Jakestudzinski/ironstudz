@@ -1,0 +1,27 @@
+{
+  "_comment": "Risk tiers for PRs. red = Jake must approve. green = may auto-merge once CI passes. Anything else = yellow. minTier raises the floor (repos without tests are never green). Patterns are case-insensitive regexes on repo-relative paths. Edit via PR only (this file is itself red).",
+  "red": [
+    "^\\.github/",
+    "^scripts/ci/",
+    "^\\.claude/",
+    "^(AGENTS|CLAUDE)\\.md$",
+    "^\\.env",
+    "^vercel\\.json$",
+    "^next\\.config\\.(js|mjs|ts)$",
+    "\\.sql$",
+    "^(src/)?middleware\\.ts$",
+    "^(src|app|lib|server|api|pages)/.*(payment|stripe|paypal|chargx|checkout|billing|payroll|auth|oauth|jwt|session|webhook|refund|crypto|secret)",
+    "^(src/)?(app|lib|server|pages|services?)/.*(api|lib|services?|server)/.*order",
+    "^prisma/"
+  ],
+  "green": [
+    "^docs/",
+    "^memory-bank/",
+    "\\.md$",
+    "\\.(test|spec)\\.(ts|tsx|js|jsx)$",
+    "^(__tests__|tests)/",
+    "^public/",
+    "\\.css$",
+    "^(src/)?components/(?!.*(checkout|payment|cart|order|auth)).*\\.(tsx|ts|jsx|js)$"
+  ]
+}
